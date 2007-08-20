@@ -21,16 +21,11 @@ function geshifilter_menu($may_cache) {
   if (!$may_cache) {
     drupal_add_css(drupal_get_path('module', 'geshifilter') .'/geshifilter.css');
     drupal_add_css(drupal_get_path('module', 'geshifilter') .'/geshi.css');
-    if (variable_get('geshi_enabled', FALSE) == TRUE) {
-      $geshi_lib = variable_get('geshifilter_geshi_dir', drupal_get_path('module', 'geshifilter').'/geshi').'/geshi.php';
-      if (file_exists($geshi_lib)) {
-        require_once($geshi_lib);
-      }
-    }
   } else {
     $items[] = array(
       'path' => 'admin/settings/geshifilter',
-      'title' => 'GeSHiFilter Configuration',
+      'title' => t('GeSHi filter'),
+      'description' => t('Configure the general GeSHi filter settings.'),
       'callback' => 'drupal_get_form',
       'callback arguments' => array('geshifilter_admin_settings'),
       'access' => user_access('administer filters'),
@@ -391,6 +386,17 @@ function geshifilter_filter($op, $delta = 0, $format = -1, $text = '') {
  *
  */
 function _geshifilter_process_code($format, $text, $flags = '') {
+  // load the GeSHi library
+  $geshi_lib = variable_get('geshifilter_geshi_dir', drupal_get_path('module', 'geshifilter').'/geshi').'/geshi.php';
+  if (file_exists($geshi_lib)) {
+    require_once($geshi_lib);
+  }
+  else {
+    drupal_set_message(t('GeSHi library not found'), 'error');
+    return $text;
+  }
+
+
   $lang_dir = variable_get('geshifilter_lang_dir', drupal_get_path('module', 'geshifilter').'/geshi/geshi');
   $types = variable_get('geshifilter_types_'.$format, array());
   $css_classes = variable_get('geshifilter_css_classes', 0);
