@@ -229,7 +229,7 @@ function geshifilter_admin_settings() {
     '#description' => t('Location where GeSHi languages files reside. Languages files are files with the names of languages, ended with .php extension. i.e: "modules/geshifilter/geshi/geshi" (without quotes).'),
     '#required' => TRUE);
 
-  return $form;
+  return system_settings_form($form);
 }
 
 /*
