@@ -1,6 +1,10 @@
 <?php
 // $Id$
 
+define('GESHIFILTER_CSS_INLINE', 1);
+define('GESHIFILTER_CSS_CLASSES', 2);
+
+
 /**
  * Implementation of hook_help()
  */
@@ -25,7 +29,7 @@ function geshifilter_menu($may_cache) {
       'title' => t('GeSHi filter'),
       'description' => t('Configure the general GeSHi filter settings.'),
       'callback' => 'drupal_get_form',
-      'callback arguments' => array('geshifilter_admin_settings'),
+      'callback arguments' => array('geshifilter_admin_settings_form'),
       'access' => user_access('administer filters'),
       'type' => MENU_NORMAL_ITEM
     );
@@ -40,7 +44,7 @@ function geshifilter_filter_tips($delta, $format, $long = false) {
 
   $default_type = variable_get('geshifilter_default_type_'. $format, 0);
   $types = variable_get('geshifilter_types_'. $format, array());
-  $start_param = variable_get('geshifilter_start_param', FALSE);
+  $start_param = variable_get('geshifilter_start_attribute', FALSE);
   $line_numbers = variable_get('geshifilter_line_numbers', GESHI_NO_LINE_NUMBERS);
   $inline_code=variable_get('geshifilter_inline_code_'. $format, FALSE);
 
@@ -109,151 +113,160 @@ function geshifilter_filter_tips($delta, $format, $long = false) {
 /**
  * Admin page linked from menu
  */
-function geshifilter_admin_settings() {
-
+function geshifilter_admin_settings_form() {
   $form = array();
 
-  $form['geshi'] = array(
+  // GeSHi library
+  $form['geshi_library'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Geshi'),
+    '#title' => t('GeSHi library'),
     '#collapsible' => true,
-    '#collapsed' => true);
-
-
-  $options = array(GESHI_HEADER_PRE => t('Use &lt;pre&gt; container'),
-                   GESHI_HEADER_DIV => t('Use &lt;div&gt; container'),
-                   GESHI_HEADER_NONE => t('No container'));
-
-  $form['geshi']['geshifilter_code_container'] = array(
-    '#type' => 'radios',
-    '#title' => t('Code Container'),
-    '#default_value' => variable_get('geshifilter_code_container', GESHI_HEADER_PRE),
-    '#options' => $options,
-    '#description' => t('Which container must goes around the code to contain it. (Geshi documentation &raquo; <a href="%link">The Code Container</a>).',
-                        array('%link' => 'http://qbnz.com/highlighter/geshi-doc.html#the-code-container')));
-
-  $options = array(  0 => t('Use in-line styles'),
-                    1 => t('Use CSS classes'));
-
-  $form['geshi']['geshifilter_css_classes'] = array(
-    '#type' => 'radios',
-    '#title' => t('CSS classes'),
-    '#default_value' => variable_get('geshifilter_css_classes', 0),
-    '#options' => $options,
-    '#description' => t('Using CSS to highlight your code instead of in-lining the styles is more compliant (the style attribute is deprecating in XHTML 2.0) and results in far less outputted code (Geshi documentation &raquo; <a href="%link">Using CSS Classes</a>).',
-                        array('%link' => 'http://qbnz.com/highlighter/geshi-doc.html#using-css-classes')));
-
-
-  $options = array(GESHI_NO_LINE_NUMBERS => t('Disable line numbers'),
-                   GESHI_NORMAL_LINE_NUMBERS => t('Use normal line numbering'),
-                   GESHI_FANCY_LINE_NUMBERS => t('Use fancy line numbering'));
-
-  $form['geshi']['geshifilter_line_numbers'] = array(
-    '#type' => 'radios',
-    '#title' => t('Line Numbers'),
-    '#default_value' => variable_get('geshifilter_line_numbers', GESHI_NO_LINE_NUMBERS),
-    '#options' => $options,
-    '#description' => t('Add line numbers to code. Fancy line numbers means that you can specify a different style for each n<sup>th</sup> line number (Geshi documentation &raquo; <a href="%link">Line Numbers</a>).',
-                        array('%link' => 'http://qbnz.com/highlighter/geshi-doc.html#line-numbers')));
-
-  $form['geshi']['geshifilter_fancy_number'] = array(
-    '#type' => 'textfield',
-    '#size' => 2,
-    '#maxlength' => 2,
-    '#title' => t('Fancy number each'),
-    '#default_value' => variable_get('geshifilter_fancy_number', 5),
-    '#description' => t('Line numbers will be styled with a different style every n line numbers. (Geshi documentation &raquo; <a href="%link">Line Numbers</a>).',
-                        array('%link' => 'http://qbnz.com/highlighter/geshi-doc.html#line-numbers')));
-
-  $form['geshi']['geshifilter_start_param'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Allow <em>start</em> param'),
-    '#default_value' => variable_get('geshifilter_start_param', FALSE),
-    '#description' => t('Allow users to make the line numbers start at any number using <em>start=number</em> param. This feature will break XHTML strict compliancy (Geshi documentation &raquo; <a href="%link">Choosing a Start Number</a>).',
-                        array('%link' => 'http://qbnz.com/highlighter/geshi-doc.html#starting-line-numbers')));
-
-  $form['inline'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('In-line styles'),
-    '#collapsible' => true,
-    '#collapsed' => true);
-
-  $form['inline']['geshifilter_overall_style'] = array(
-    '#type' => 'textfield',
-    '#maxlength' => 255,
-    '#title' => t('Overall code block style'),
-    '#default_value' => variable_get('geshifilter_overall_style', ''),
-    '#description' => t('Style the overall code block. For example, you can set the border style/colour, any margins and padding etc. (Geshi documentation &raquo; <a href="%link">The Overall Styles</a>).',
-                        array('%link' => 'http://qbnz.com/highlighter/geshi-doc.html#the-overall-styles')));
-
-  $form['inline']['geshifilter_number_style'] = array(
-    '#type' => 'textfield',
-    '#maxlength' => 255,
-    '#title' => t('Line number style'),
-    '#default_value' => variable_get('geshifilter_number_style', ''),
-    '#description' => t('(Geshi documentation &raquo; <a href="%link">Line Number Styles</a>).',
-                          array('%link' => 'http://qbnz.com/highlighter/geshi-doc.html#line-number-styles')));
-
-  $form['inline']['geshifilter_fancy_number_style'] = array(
-    '#type' => 'textfield',
-    '#maxlength' => 255,
-    '#title' => t('Fancy line number style'),
-    '#default_value' => variable_get('geshifilter_fancy_number_style', 'font-weight: bold;'),
-    '#description' => t('(Geshi documentation &raquo; <a href="%link">Line Number Styles</a>).',
-                          array('%link' => 'http://qbnz.com/highlighter/geshi-doc.html#line-number-styles')));
-
-  $form['inline']['geshifilter_code_style'] = array(
-    '#type' => 'textfield',
-    '#maxlength' => 255,
-    '#title' => t('Code style'),
-    '#default_value' => variable_get('geshifilter_code_style', 'font-weight: normal;'),
-    '#description' => t('Explicitly override the styles you set for line numbers (Geshi documentation &raquo; <a href="%link">Styling Line Numbers</a>).',
-                        array('%link' => 'http://qbnz.com/highlighter/geshi-doc.html#styling-line-numbers')));
-
-  $form['advanced'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Advanced'),
-    '#collapsible' => true,
-    '#collapsed' => true);
-
-  $form['advanced']['geshifilter_geshi_dir'] = array(
+  );
+  $form['geshi_library']['geshifilter_geshi_dir'] = array(
     '#type' => 'textfield',
     '#title' => t('GeSHi Directory'),
     '#default_value' => variable_get('geshifilter_geshi_dir', drupal_get_path('module', 'geshifilter') .'/geshi'),
     '#description' => t('Location of directory where geshi.php is. i.e: "modules/geshifilter/geshi" (without quotes).'),
-    '#required' => TRUE);
+    '#required' => TRUE
+  );
 
-  $form['advanced']['geshifilter_lang_dir'] = array(
+  $form['geshi_library']['geshifilter_lang_dir'] = array(
     '#type' => 'textfield',
     '#title' => t('Languages directory'),
     '#default_value' => variable_get('geshifilter_lang_dir', drupal_get_path('module', 'geshifilter') .'/geshi/geshi'),
     '#description' => t('Location where GeSHi languages files reside. Languages files are files with the names of languages, ended with .php extension. i.e: "modules/geshifilter/geshi/geshi" (without quotes).'),
-    '#required' => TRUE);
+    '#required' => TRUE
+  );
 
+  // load GeSHi library for defined constants and present the
+  // GeSHi filter settings if successful
+  if (_geshifilter_load_geshi()) {
+
+    $form['geshi_theming'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Theming, styling and CSS'),
+    );
+    // Code container
+    $form['geshi_theming']['geshifilter_code_container'] = array(
+      '#type' => 'radios',
+      '#title' => t('Code Container'),
+      '#default_value' => variable_get('geshifilter_code_container', GESHI_HEADER_PRE),
+      '#options' => array(
+        GESHI_HEADER_PRE => t('Use &lt;pre&gt; container'),
+        GESHI_HEADER_DIV => t('Use &lt;div&gt; container'),
+        GESHI_HEADER_NONE => t('No container')
+      ),
+      '#description' => t('Define the container element to put the highlighted source code in. (GeSHi documentation: !link).',
+        array('!link' => l('The Code Container', 'http://qbnz.com/highlighter/geshi-doc.html#the-code-container'))),
+    );
+    // CSS mode
+    $form['geshi_theming']['geshifilter_css_mode'] = array(
+      '#type' => 'radios',
+      '#title' => t('CSS mode'),
+      '#default_value' => variable_get('geshifilter_css_mode', GESHIFILTER_CSS_INLINE),
+      '#options' =>  array(
+        GESHIFILTER_CSS_INLINE => t('Use in-line styles'),
+        GESHIFILTER_CSS_CLASSES => t('Use CSS classes')
+      ),
+      '#description' => t('Using CSS classes to highlight your code instead of in-lining the styles is more compliant (the style attribute is deprecating in XHTML 2.0) and results in far less outputted code (GeSHi documentation: !link).',
+        array('!link' => l('Using CSS Classes', 'http://qbnz.com/highlighter/geshi-doc.html#using-css-classes'))),
+    );
+    // Line numbers
+    $form['geshi_theming']['geshifilter_line_numbers'] = array(
+      '#type' => 'radios',
+      '#title' => t('Line Numbers'),
+      '#default_value' => variable_get('geshifilter_line_numbers', GESHI_NO_LINE_NUMBERS),
+      '#options' => array(
+        GESHI_NO_LINE_NUMBERS => t('Disable line numbers'),
+        GESHI_NORMAL_LINE_NUMBERS => t('Use normal line numbering'),
+        GESHI_FANCY_LINE_NUMBERS => t('Use fancy line numbering')
+      ),
+      '#description' => t('Add line numbers to code. Fancy line numbers means that you can specify a different style for each n<sup>th</sup> line number (GeSHi documentation: !link).',
+        array('!link' => l('Line Numbers', 'http://qbnz.com/highlighter/geshi-doc.html#line-numbers'))),
+    );
+
+    $form['geshi_theming']['geshifilter_fancy_number'] = array(
+      '#type' => 'textfield',
+      '#size' => 2,
+      '#maxlength' => 2,
+      '#title' => t('Fancy number each'),
+      '#default_value' => variable_get('geshifilter_fancy_number', 5),
+      '#description' => t('Line numbers will be styled with a different style every n line numbers. (GeSHi documentation: !link).',
+        array('!link' => l('Line Numbers', 'http://qbnz.com/highlighter/geshi-doc.html#line-numbers'))),
+    );
+
+    $form['geshi_theming']['geshifilter_start_attribute'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Allow <em>start</em> attribute'),
+      '#default_value' => variable_get('geshifilter_start_attribute', FALSE),
+      '#description' => t('Allow users to make the line numbers start at any number using the <em>start=number</em> attribute. This feature will break XHTML strict compliancy (GeSHi documentation: !link).',
+        array('!link' => l('Choosing a Start Number', 'http://qbnz.com/highlighter/geshi-doc.html#starting-line-numbers'))),
+    );
+
+    // inline styles
+    $form['inline'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('In-line styles'),
+      '#collapsible' => true,
+      '#collapsed' => true,
+    );
+    $form['inline']['geshifilter_overall_style'] = array(
+      '#type' => 'textfield',
+      '#maxlength' => 255,
+      '#title' => t('Overall code block style'),
+      '#default_value' => variable_get('geshifilter_overall_style', ''),
+      '#description' => t('Style the overall code block. For example, you can set the border style/colour, any margins and padding etc. (GeSHi documentation: !link).',
+        array('!link' => l('The Overall Styles', 'http://qbnz.com/highlighter/geshi-doc.html#the-overall-styles'))),
+    );
+    $form['inline']['geshifilter_number_style'] = array(
+      '#type' => 'textfield',
+      '#maxlength' => 255,
+      '#title' => t('Line number style'),
+      '#default_value' => variable_get('geshifilter_number_style', ''),
+      '#description' => t('(GeSHi documentation: !link).',
+        array('!link' => l('Line Number Styles', 'http://qbnz.com/highlighter/geshi-doc.html#line-number-styles'))),
+    );
+    $form['inline']['geshifilter_fancy_number_style'] = array(
+      '#type' => 'textfield',
+      '#maxlength' => 255,
+      '#title' => t('Fancy line number style'),
+      '#default_value' => variable_get('geshifilter_fancy_number_style', 'font-weight: bold;'),
+      '#description' => t('(GeSHi documentation: !link).',
+        array('!link' => l('Line Number Styles', 'http://qbnz.com/highlighter/geshi-doc.html#line-number-styles'))),
+    );
+    $form['inline']['geshifilter_code_style'] = array(
+      '#type' => 'textfield',
+      '#maxlength' => 255,
+      '#title' => t('Code style'),
+      '#default_value' => variable_get('geshifilter_code_style', 'font-weight: normal;'),
+      '#description' => t('Explicitly override the styles you set for line numbers (GeSHi documentation: !link).',
+        array('!link' => l('Styling Line Numbers', 'http://qbnz.com/highlighter/geshi-doc.html#styling-line-numbers'))),
+    );
+  }
   return system_settings_form($form);
 }
 
 /*
  * Validate the settings form
  */
-function geshifilter_settings_form_validate($form_id, $form_values) {
-
-  $form_values['geshifilter_geshi_dir'] = rtrim($form_values['geshifilter_geshi_dir'], '/\\');
-  $form_values['geshifilter_lang_dir'] = rtrim($form_values['geshifilter_lang_dir'], '/\\');
+function geshifilter_admin_settings_form_validate($form_id, $form_values) {
 
   // Check if geshi directory exists.
   if (!is_dir($form_values['geshifilter_geshi_dir'])) {
-    form_set_error('geshifilter_geshi_dir', t('The GeSHi directory %geshi-directory does not exist. Please <a href="http://qbnz.com/highlighter/">download GeSHi</a>, uncompress it and copy the folder into %geshifilter-directory.', array('%geshi-directory' => theme('placeholder', $form_values['geshifilter_geshi_dir']), '%geshifilter-directory' => theme('placeholder', drupal_get_path('module', 'geshifilter')))));
+    form_set_error('geshifilter_geshi_dir', t('The directory "%geshi-directory" does not exist.',
+      array('%geshi-directory' => $form_values['geshifilter_geshi_dir'])));
   }
 
   // Check if geshi.php exists
   if (!is_file($form_values['geshifilter_geshi_dir'] .'/geshi.php')) {
-      form_set_error('geshifilter_geshi_dir', t('Unable to find the GeSHi main file (geshi.php) at %geshi-directory.', array('%geshi-directory' => theme('placeholder', $form_values['geshifilter_geshi_dir']))));
+    form_set_error('geshifilter_geshi_dir', t('Unable to find the GeSHi library (geshi.php) in %geshi-directory.',
+      array('%geshi-directory' => $form_values['geshifilter_geshi_dir'])));
   }
 
   // Check if languages directory exists.
   if (!is_dir($form_values['geshifilter_lang_dir'])) {
-    form_set_error('geshifilter_lang_dir', t('The GeSHi languages directory %directory does not exist.', array('%directory' => theme('placeholder', $form_values['geshifilter_lang_dir']))));
+    form_set_error('geshifilter_lang_dir', t('The GeSHi languages directory %directory does not exist.',
+      array('%directory' => $form_values['geshifilter_lang_dir'])));
   }
 
   // Check if there are some language files in the directory
@@ -337,26 +350,35 @@ function geshifilter_filter($op, $delta = 0, $format = -1, $text = '') {
 }
 
 /**
- *
+ * Helper function for loading the GeSHi library
  */
-function _geshifilter_process_code($format, $text, $flags = '') {
-  // load the GeSHi library
+function _geshifilter_load_geshi() {
   $geshi_lib = variable_get('geshifilter_geshi_dir', drupal_get_path('module', 'geshifilter') .'/geshi') .'/geshi.php';
   if (file_exists($geshi_lib)) {
     require_once($geshi_lib);
+    return TRUE;
   }
   else {
     drupal_set_message(t('GeSHi library not found'), 'error');
+    return FALSE;
+  }
+}
+
+/**
+ *
+ */
+function _geshifilter_process_code($format, $text, $flags = '') {
+  // load the GeSHi library and just return text if not successful
+  if (!_geshifilter_load_geshi()) {
     return $text;
   }
 
   $lang_dir = variable_get('geshifilter_lang_dir', drupal_get_path('module', 'geshifilter') .'/geshi/geshi');
   $types = variable_get('geshifilter_types_'. $format, array());
-  $css_classes = variable_get('geshifilter_css_classes', 0);
   $code_container = variable_get('geshifilter_code_container', GESHI_HEADER_PRE);
   $line_numbers = variable_get('geshifilter_line_numbers', GESHI_NO_LINE_NUMBERS);
   $fancy_number = variable_get('geshifilter_fancy_number', 5);
-  $start_param = variable_get('geshifilter_start_param', FALSE);
+  $start_param = variable_get('geshifilter_start_attribute', FALSE);
   $overall_style = variable_get('geshifilter_overall_style', '');
   $number_style = variable_get('geshifilter_number_style', '');
   $fancy_number_style = variable_get('geshifilter_fancy_number_style', 'font-weight: bold;');
@@ -404,7 +426,12 @@ function _geshifilter_process_code($format, $text, $flags = '') {
 
       $geshi = new GeSHi($matched, $lang, $lang_dir);
 
-      $geshi->enable_classes($css_classes);
+      // enable usage of CSS classes instead of inline styles
+      // (should be the first method of the GeSHi object to call according to
+      // http://qbnz.com/highlighter/geshi-doc.html#enabling-css-classes)
+      if (variable_get('geshifilter_css_mode', GESHIFILTER_CSS_INLINE) == GESHIFILTER_CSS_CLASSES) {
+        $geshi->enable_classes(TRUE);
+      }
 
       if ($match[1][$key] =='code') {
         $geshi->set_header_type(GESHI_HEADER_NONE);
