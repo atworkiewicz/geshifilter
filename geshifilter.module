@@ -9,6 +9,9 @@
 define('GESHIFILTER_GESHI_BRANCH_1_0_x', '1.0.x');
 define('GESHIFILTER_GESHI_BRANCH_1_1_x',  '1.1.x');
 
+define('GESHIFILTER_DEFAULT_NOHIGHLIGHTING', 'GESHIFILTER_DEFAULT_NOHIGHLIGHTING');
+define('GESHIFILTER_DEFAULT_DONOTHING', 'GESHIFILTER_DEFAULT_DONOTHING');
+
 define('GESHIFILTER_CSS_INLINE', 1);
 define('GESHIFILTER_CSS_CLASSES', 2);
 
@@ -16,15 +19,25 @@ define('GESHIFILTER_CSS_CLASSES', 2);
  * Implementation of hook_help().
  */
 function geshifilter_help($section) {
-  $output = '';
   switch ($section) {
     case 'admin/settings/geshifilter':
     case 'admin/help#geshifilter':
-      $output = '<p>'. t('The GeSHi filter does syntax highlighting using <a href="http://geshi.org/">GeSHi (Generic Syntax Highlighter)</a>.') .'</p>';
-      $output .= '<p>'. t('This filter supports version 1.0.x and the developement version 1.1.x of GeSHi, but it is recommended to use version 1.0.x at the moment.') .'</p>';
+      $output = '<p>'. t('The GeSHi filter module provides a filter for syntax highlighting of inline source code or blocks of source code based on the PHP library !GeSHi.', array('!GeSHi' => l('GeSHi (Generic Syntax Highlighter)', 'http://qbnz.com/highlighter/'))) .'</p>';
+      $output .= '<p>'. t('Usage is relatively easy: enable the GeSHi filter in the desired !inputformats, configure the general or per input format settings of the GeSHi filter, check for !filterconflicts and use the input filter as described in the !filtertips. After changing the general settings, it is typically needed to <a href="!clearfiltercache">clear the filter cache</a> before the changes take effect on old content.', array(
+        '!inputformats' => l('input formats', 'admin/settings/filters'),
+        '!filterconflicts' => l('filter conflicts', 'admin/settings/geshifilter/filterconflicts'),
+        '!filtertips' => l('filter tips', 'filter/tips'),
+        '!clearfiltercache' => url('geshifilter/clearfiltercache', drupal_get_destination())
+      )) .'</p>';
+      if ($section == 'admin/help#geshifilter') {
+        $output .= '<p>'. t('The GeSHi filter module for Drupal requires the GeSHi library to work. The GeSHi filter is actually just Drupal flavored wrapper around the GeSHi library. Because of <a href="!repositorypolicies">drupal.org repository policies</a> however, the GeSHi library is not included in the GeSHi filter package, so you\'ll have to download and install the GeSHi library separately.', array(
+          '!repositorypolicies' => url('http://drupal.org/node/66113'),
+        )) .'</p>';
+        $output .= '<p>'. t('The current version of the GeSHi filter module supports the 1.0.x branch of the GeSHi library and has basic support for the developement branch 1.1.x. Usage of the 1.0.x branch is recommended however.') .'</p>';
+      }
+      return $output;
       break;
   }
-  return $output;
 }
 
 /**
@@ -88,6 +101,14 @@ function geshifilter_menu($may_cache) {
       'weight' => 4,
       'type' => MENU_LOCAL_TASK,
     );
+    // clear filter cache callback
+    $items[] = array(
+      'path' => 'geshifilter/clearfiltercache',
+      'title' => t('Clear filter cache'),
+      'callback' => 'geshifilter_clear_filter_cache',
+      'type' => MENU_CALLBACK,
+      'access' => user_access('administer site configuration'),
+    );
   }
   else {
     // Since the filtered content is cached, it is not possible to know on which
@@ -106,7 +127,7 @@ function geshifilter_filter_tips($delta, $format, $long = false) {
   // get the available languages
   $languages = _geshifilter_get_enabled_languages();
 
-  $default_lang = variable_get('geshifilter_default_language', '');
+  $default_lang = variable_get('geshifilter_default_language', GESHIFILTER_DEFAULT_NOHIGHLIGHTING);
   if (!$default_lang) {
     $default_lang = 'no highlighting';
   }
@@ -169,7 +190,7 @@ function geshifilter_filter($op, $delta = 0, $format = -1, $text = '') {
       return array('GeSHi filter');
 
     case 'description':
-      return t('Syntax highlighting using the <a href="http://geshi.org">GeSHi</a> engine');
+      return t('Enables syntax highlighting of inline/block source code using the GeSHi engine');
 
     case 'process':
       return geshifilter_process($format, $text);
@@ -428,14 +449,20 @@ function geshifilter_admin_general_settings() {
     '#default_value' => geshifilter_use_format_specific_options(),
     '#description' => t('Enable seperate configuration of the GeSHi filter for each <a href="!input_formats">input format</a>.', array('!input_formats' => url('admin/settings/filters'))),
   );
-    // default language
+  // default language
   $languages = _geshifilter_get_enabled_languages();
   $form['geshifilter_default_language'] = array(
     '#type' => 'select',
-    '#title' => t('Default language syntax'),
-    '#default_value' => variable_get('geshifilter_default_language', ''),
-    '#options' => array_merge(array('<no highlighting>'), $languages),
-    '#description' => t('Select the default language syntax to use. This setting can be overwritten with a language attribute in the tag.')
+    '#title' => t('Default highlighting mode'),
+    '#default_value' => variable_get('geshifilter_default_language', GESHIFILTER_DEFAULT_NOHIGHLIGHTING),
+    '#options' => array(
+      t('No highlighting') => array(
+        GESHIFILTER_DEFAULT_DONOTHING => t('Do nothing'),
+        GESHIFILTER_DEFAULT_NOHIGHLIGHTING => t('Just add a code container'),
+        ),
+      t('Languages') => $languages
+    ),
+    '#description' => t('Select the default highlighting mode to use when no language is defined with a language attribute in the tag.')
   );
   // Styling, layout and CSS
   $form['geshifilter_styling'] = array(
@@ -725,20 +752,20 @@ function geshifilter_process($format, $text) {
   $attributes_string = implode('|', array_merge($lang_attributes, $linenumber_attributes));
 
   // todo: maybe change to preg_replace_callback, should be faster
-  if (preg_match_all('#<('. $tags_string .')([^>]*)>(.*?)</\1\s*>#s', $text, $match)) {
-    // $match[0][xx] .... fully matched string <tag type="language">...</tag>
-    // $match[1][xx] .... tagname
-    // $match[2][xx] .... full params string type="language"...
-    // $match[3][xx] .... tag content
-    foreach ($match[3] as $key => $value) {
-      // determine language by language tag
-      $lang = variable_get('geshifilter_default_language', '');
-      if (isset($tag_to_lang[$match[1][$key]])) {
-        $lang = $tag_to_lang[$match[1][$key]];
+  if (preg_match_all('#<('. $tags_string .')([^>]*)>(.*?)</\1\s*>#s', $text, $match_object)) {
+    // $match_object[0][xx] .... fully matched string <tag type="language">...</tag>
+    // $match_object[1][xx] .... tagname
+    // $match_object[2][xx] .... full params string type="language"...
+    // $match_object[3][xx] .... tag content
+    foreach ($match_object[3] as $codeblock_index => $source_code) {
+      // determine language by language tag or use default
+      $lang = variable_get('geshifilter_default_language', GESHIFILTER_DEFAULT_NOHIGHLIGHTING);
+      if (isset($tag_to_lang[$match_object[1][$codeblock_index]])) {
+        $lang = $tag_to_lang[$match_object[1][$codeblock_index]];
       }
       // parse attributes (for language and line numbers)
       $linenumbers_start = 0;
-      preg_match_all('#('. $attributes_string .')="?([^\s"]*)"?#', $match[2][$key], $param);
+      preg_match_all('#('. $attributes_string .')="?([^\s"]*)"?#', $match_object[2][$codeblock_index], $param);
       // $param[0][xx] .... fully matched string type="language"
       // $param[1][xx] .... param name
       // $param[2][xx] .... param value
@@ -759,53 +786,62 @@ function geshifilter_process($format, $text) {
         }
       }
 
-      // it's a seperate block if after the tag a newline starts or there is any newline at all
-      $is_block = ($value[0] == "\n") || (strpos($value, "\n") > 0);
+      // format as code block if there are newlines in the code
+      $is_block = (strpos($source_code, "\n") !== FALSE);
 
-      $matched = $value;
-
-      if ($lang) {
-
-        // geshi will reencode these
-        $matched = decode_entities(trim($matched));
-
-        // undo nl and p formatting
-        $matched = preg_replace("@<br />@", "", $matched);
-        $matched = preg_replace("@<br/>@", "", $matched);
-        $matched = preg_replace("@<p>|</p>@", "", $matched);
-
-        $matched = trim($matched);
-
-        switch ($geshi_branch) {
-          case GESHIFILTER_GESHI_BRANCH_1_0_x:
-            $matched = geshifilter_process_1_0_x($format, $matched, $lang, $is_block, $linenumbers_start);
-            break;
-          case GESHIFILTER_GESHI_BRANCH_1_1_x:
-            $matched = geshifilter_process_1_1_x($format, $matched, $lang, $is_block);
-            break;
-          default:
-            $matched = $value;
-            break;
-        }
+      switch ($lang) {
+        case GESHIFILTER_DEFAULT_DONOTHING:
+          // do nothing, duh
+          break;
+        case GESHIFILTER_DEFAULT_NOHIGHLIGHTING:
+          // remove newline (<br/>) and paragraph (<p>) formatting, GeSHi will add these again
+          $source_code = preg_replace('@<p>|</p>|<br\s*/>@', "", $source_code);
+          // remove leading/trailing newlines
+          $source_code = trim($source_code, "\n\r");
+          // add code container
+          if ($is_block) {
+            switch (variable_get('geshifilter_code_container', GESHI_HEADER_PRE)) {
+              case GESHI_HEADER_PRE:
+                $source_code = '<pre class="geshifilter">'. $source_code .'</pre>';
+                break;
+              case GESHI_HEADER_DIV:
+                $source_code = preg_replace('@\n|\r@', '<br />', $source_code);
+                $source_code = '<div class="geshifilter">'. $source_code .'</div>';
+                break;
+            }
+          }
+          else {
+            $source_code = '<code class="geshifilter">'. $source_code .'</code>';
+          }
+          // replace the original substring with the highlighted version
+          $text = str_replace($match_object[0][$codeblock_index], $source_code, $text);
+          break;
+        default:
+          // decode html entities, GeSHi will reencode these
+          $source_code = decode_entities($source_code);
+          // remove newline (<br/>) and paragraph (<p>) formatting, GeSHi will add these again
+          $source_code = preg_replace('@<p>|</p>|<br\s*/>@', "", $source_code);
+          // remove leading/trailing newlines
+          $source_code = trim($source_code, "\n\r");
+          // do the highlighting
+          switch ($geshi_branch) {
+            case GESHIFILTER_GESHI_BRANCH_1_0_x:
+              $source_code = geshifilter_process_1_0_x($format, $source_code, $lang, $is_block, $linenumbers_start);
+              break;
+            case GESHIFILTER_GESHI_BRANCH_1_1_x:
+              $source_code = geshifilter_process_1_1_x($format, $source_code, $lang, $is_block);
+              break;
+            default:
+              drupal_set_message(t('Unknown GeSHi library branch'), 'error');
+              return $text;
+          }
+          // replace the original substring with the highlighted version
+          $text = str_replace($match_object[0][$codeblock_index], $source_code, $text);
+          break;
       }
-      else {
-        // undo nl and p formatting
-        $matched = preg_replace("@<br />@", "", $matched);
-        $matched = preg_replace("@<p>|</p>@", "", $matched);
-
-        $matched = trim($matched);
-
-        if ($is_block) {
-          $matched = '<pre class="geshifilter">'. $matched .'</pre>';
-        }
-        else {
-          $matched = '<code class="geshifilter">'. $matched .'</code>';
-        }
-      }
-
-      $text = str_replace($match[0][$key], $matched, $text);
     }
   }
+  // return the filtered text
   return $text;
 }
 
@@ -851,4 +887,13 @@ function geshifilter_process_1_1_x($format, $text, $lang, $is_block) {
   }
   // $geshi->setRenderer(new GeshiRendererHTMLCSS);
   return $geshi->parseCode();
+}
+
+/**
+ * callback function for clearing the filter cache
+ */
+function geshifilter_clear_filter_cache() {
+  cache_clear_all('*', 'cache_filter', TRUE);
+  drupal_set_message('Filter cache cleared.');
+  drupal_goto();
 }
