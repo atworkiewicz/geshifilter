@@ -6,7 +6,7 @@
  * An input filter for syntax highlighting using the GeSHi library.
  */
 
-define('GESHIFILTER_DEFAULT_NOHIGHLIGHTING', 'GESHIFILTER_DEFAULT_NOHIGHLIGHTING');
+define('GESHIFILTER_DEFAULT_PLAINTEXT', 'GESHIFILTER_DEFAULT_PLAINTEXT');
 define('GESHIFILTER_DEFAULT_DONOTHING', 'GESHIFILTER_DEFAULT_DONOTHING');
 
 define('GESHIFILTER_CSS_INLINE', 1);
@@ -122,58 +122,83 @@ function geshifilter_filter_tips($delta, $format, $long = false) {
   list($generic_code_tags, $language_tags, $tag_to_lang) = _geshifilter_get_tags($format);
   // get the available languages
   $languages = _geshifilter_get_enabled_languages();
+  $lang_attributes = _geshifilter_whitespace_explode(geshifilter_attributes($format));
+  $linenumber_attributes = _geshifilter_whitespace_explode(geshifilter_linenumber_attributes());
+  $default_lang = variable_get('geshifilter_default_language', GESHIFILTER_DEFAULT_PLAINTEXT);
 
-  $default_lang = variable_get('geshifilter_default_language', GESHIFILTER_DEFAULT_NOHIGHLIGHTING);
-  if (!$default_lang) {
-    $default_lang = 'no highlighting';
-  }
   if ($long) {
-    $output = '<p>'. t('Code highlighting can be done with the following tags:') .'</p>';
+    // syntax highlighting tags
+    $output = '<p>'. t('Syntax highlighting of source code can be done with the following tags:') .'</p>';
     $items = array();
     foreach ($generic_code_tags as $tag) {
-      $items[] = '&lt;'. $tag .'&gt; - '. t('default codeblock or specify highlighting type with %param parameters', array('%param' => implode(', ', _geshifilter_whitespace_explode(geshifilter_attributes($format)))));
+      $items[] = '&lt;'. $tag .'&gt;: '. t('generic syntax highlighting tag');
     }
     foreach ($language_tags as $tag) {
-      $items[] .= '&lt;'. $tag .'&gt; - '. t('highlight %lang', array('%lang' => $tag_to_lang[$tag]));
+      $items[] .= '&lt;'. $tag .'&gt;: '. t('syntax highlighting of %lang', array('%lang' => $tag_to_lang[$tag]));
     }
     $output .= theme('item_list', $items);
-    $output .= '<p>'. t('Additional tips and options:') .'</p>';
+    // additional options and tips
+    $output .= '<p>'. t('Additional options and tips:') .'</p>';
     $items = array();
-    $items[] = t('To highligh code as a block start the code on a newline after the code-tag, otherwise it will be highlighted inline.');
-    $items[] = t('The available languages for the language attribute are: %langs.', array('%langs' => implode(', ', $languages)));
-    $items[] = t('To enable linenumbers use %attributes as attribute and optionally specify the starting number with <em>="number"</em> or just <em>=number</em> after the attribute.', array('%attributes' => implode(', ', _geshifilter_whitespace_explode(geshifilter_linenumber_attributes()))));
+    $items[] = t('The language for the generic syntax highlighting tags can be specified with the attribute(s): %attributes. The available languages are: %languages.', array('%attributes' => implode(', ', $lang_attributes), '%languages' => implode(', ', $languages)));
+    switch ($default_lang) {
+      case GESHIFILTER_DEFAULT_DONOTHING:
+        $items[] = t('Default highlighting mode: when no language attribute is specified the code block won\'t be processed by the GeSHi filter.');
+        break;
+      case GESHIFILTER_DEFAULT_PLAINTEXT:
+        $items[] = t('Default highlighting mode: when no language attribute is specified no syntax highlighting is done by default.');
+        break;
+      default:
+        $items[] = t('Default highlighting mode: the default language used for syntax highlighting is %default_lang.', array('%default_lang' => $default_lang));
+        break;
+    }
+    $items[] = t('Line numbering can be enabled by specifying the start line number with the attribute(s): %attributes.', array('%attributes' => implode(', ', $linenumber_attributes)));
+
+    $items[] = t('If the source code between the tags contains a newline (e.g. immediatly after the opening tag), the highlighted source code will be displayed as a code block. Otherwise it will be displayed inline.');
     $output .= theme('item_list', $items);
+    // examples
     $output .= '<p>'. t('Examples:') .'</p>';
-    $header = array(t('Language'), t('Inline'), t('Block'));
+    $header = array(t('You type'), t('You get'));
     $rows = array();
-    foreach ($generic_code_tags as $tag) {
-      if ($default_lang == 'no highlighting') {
+
+    $generic_code_tag = array_shift($generic_code_tags);
+    $lang_attribute = array_shift($lang_attributes);
+    $linenumber_attribute = array_shift($linenumber_attributes);
+    $language_tag = array_shift($language_tags);
+
+    if ($generic_code_tag) {
+      $rows[] = array(
+        '<code>&lt;'. $generic_code_tag .'&gt;foo = bar;&lt;/'. $generic_code_tag .'&gt</code>',
+        t('Inline code with the default syntax highlighting mode.'),
+      );
+      $rows[] = array(
+        '<code>&lt;'. $generic_code_tag .'&gt;<br />foo = bar;<br />baz = foz;<br />&lt;/'. $generic_code_tag .'&gt</code>',
+        t('Code block with the default syntax highlighting mode.'),
+      );
+      if ($lang_attribute) {
         $rows[] = array(
-          $default_lang,
-          '&lt;'. $tag .'&gt;'. t('inline code without special highlighting') .'&lt;/'. $tag .'&gt',
-          '&lt;'. $tag .'&gt;<br/>'. t('block code without special highlighting') .'<br/>&lt;/'. $tag .'&gt'
+          '<code>&lt;'. $generic_code_tag .' '. $lang_attribute .'="php"&gt;<br />foo = bar;<br />baz = foz;<br />&lt;/'. $generic_code_tag .'&gt</code>',
+          t('Code block with PHP syntax highlighting.'),
         );
       }
-      else {
+      if ($linenumber_attribute) {
         $rows[] = array(
-          $default_lang,
-          '&lt;'. $tag .'&gt;'. t('inline code for %lang', array('%lang' => $default_lang)) .'&lt;/'. $tag .'&gt',
-          '&lt;'. $tag .'&gt;<br/>'. t('block code for %lang', array('%lang' => $default_lang)) .'<br/>&lt;/'. $tag .'&gt'
+          '<code>&lt;'. $generic_code_tag .' '. $linenumber_attribute .'="5"&gt;<br />foo = bar;<br />baz = foz;<br />&lt;/'. $generic_code_tag .'&gt</code>',
+          t('Code block with the default syntax highlighting mode and line numbers starting from 5.'),
         );
       }
     }
-    foreach ($language_tags as $tag) {
+    if ($language_tag) {
       $rows[] = array(
-        $tag_to_lang[$tag],
-        '&lt;'. $tag .'&gt;'. t('inline code for %lang', array('%lang' => $tag_to_lang[$tag])) .'&lt;/'. $tag .'&gt',
-        '&lt;'. $tag .'&gt;<br/>'. t('block code for %lang', array('%lang' => $tag_to_lang[$tag])) .'<br/>&lt;/'. $tag .'&gt'
+        '<code>&lt;'. $language_tag .'&gt;<br />foo = bar;<br />baz = foz;<br />&lt;/'. $language_tag .'&gt</code>',
+        t('Code block with @language syntax highlighting.', array('@language' => $tag_to_lang[$language_tag])),
       );
     }
     $output .= theme('table', $header, $rows);
     return $output;
   }
   else {
-    return t('You can highlight code with any of the following tags: %tags', array('%tags' => '<'. implode('>, <', array_merge($generic_code_tags, $language_tags)) .'>'));
+    return t('You can enable syntax highlighting of source code with the following tags: %tags', array('%tags' => '<'. implode('>, <', array_merge($generic_code_tags, $language_tags)) .'>'));
   }
 }
 
@@ -419,11 +444,11 @@ function geshifilter_admin_general_settings() {
   $form['geshifilter_default_language'] = array(
     '#type' => 'select',
     '#title' => t('Default highlighting mode'),
-    '#default_value' => variable_get('geshifilter_default_language', GESHIFILTER_DEFAULT_NOHIGHLIGHTING),
+    '#default_value' => variable_get('geshifilter_default_language', GESHIFILTER_DEFAULT_PLAINTEXT),
     '#options' => array(
       t('No highlighting') => array(
         GESHIFILTER_DEFAULT_DONOTHING => t('Do nothing'),
-        GESHIFILTER_DEFAULT_NOHIGHLIGHTING => t('Just add a code container'),
+        GESHIFILTER_DEFAULT_PLAINTEXT => t('As plain text'),
         ),
       t('Languages') => $languages
     ),
@@ -709,7 +734,7 @@ function geshifilter_process($format, $text) {
     // $match_object[3][xx] .... tag content
     foreach ($match_object[3] as $codeblock_index => $source_code) {
       // determine language by language tag or use default
-      $lang = variable_get('geshifilter_default_language', GESHIFILTER_DEFAULT_NOHIGHLIGHTING);
+      $lang = variable_get('geshifilter_default_language', GESHIFILTER_DEFAULT_PLAINTEXT);
       if (isset($tag_to_lang[$match_object[1][$codeblock_index]])) {
         $lang = $tag_to_lang[$match_object[1][$codeblock_index]];
       }
@@ -738,7 +763,7 @@ function geshifilter_process($format, $text) {
         case GESHIFILTER_DEFAULT_DONOTHING:
           // do nothing, duh
           break;
-        case GESHIFILTER_DEFAULT_NOHIGHLIGHTING:
+        case GESHIFILTER_DEFAULT_PLAINTEXT:
           // use plain text 'highlighting'
           $lang = 'text';
         default:
