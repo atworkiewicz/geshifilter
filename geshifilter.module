@@ -12,6 +12,9 @@ define('GESHIFILTER_DEFAULT_DONOTHING', 'GESHIFILTER_DEFAULT_DONOTHING');
 define('GESHIFILTER_CSS_INLINE', 1);
 define('GESHIFILTER_CSS_CLASSES', 2);
 
+define('GESHIFILTER_LANGUAGE_ATTRIBUTES', 'type lang language');
+define('GESHIFILTER_LINENUMBER_ATTRIBUTES', 'start');
+
 /**
  * Implementation of hook_help().
  */
@@ -122,8 +125,8 @@ function geshifilter_filter_tips($delta, $format, $long = false) {
   list($generic_code_tags, $language_tags, $tag_to_lang) = _geshifilter_get_tags($format);
   // get the available languages
   $languages = _geshifilter_get_enabled_languages();
-  $lang_attributes = _geshifilter_whitespace_explode(geshifilter_attributes($format));
-  $linenumber_attributes = _geshifilter_whitespace_explode(geshifilter_linenumber_attributes());
+  $lang_attributes = _geshifilter_whitespace_explode(GESHIFILTER_LANGUAGE_ATTRIBUTES);
+  $linenumber_attributes = _geshifilter_whitespace_explode(GESHIFILTER_LINENUMBER_ATTRIBUTES);
   $default_lang = variable_get('geshifilter_default_language', GESHIFILTER_DEFAULT_PLAINTEXT);
 
   if ($long) {
@@ -274,21 +277,9 @@ function _geshifilter_tag_and_attribute_settings($format) {
   $f = ($format === NULL) ? '' : "_$format";
   $form["geshifilter_tags$f"] = array(
     '#type' => 'textfield',
-    '#title' => t('Syntax highlighting tags'),
+    '#title' => t('Generic syntax highlighting tags'),
     '#default_value' => geshifilter_tags($format),
     '#description' => t('Tags that should activate the GeSHi syntax highlighting. Specify a space-separated list of tagnames.')
-  );
-  $form["geshifilter_attributes$f"] = array(
-    '#type' => 'textfield',
-    '#title' => t('Language attributes'),
-    '#default_value' => geshifilter_attributes($format),
-    '#description' => t('Space separated list of attribute names for specifying the language syntax.')
-  );
-  $form["geshifilter_linenumber_attributes$f"] = array(
-    '#type' => 'textfield',
-    '#title' => t('Line numbers attributes'),
-    '#default_value' => geshifilter_linenumber_attributes($format),
-    '#description' => t('Space separated list of attribute names for enabling line numbering and specifying the number of the first line.')
   );
   return $form;
 }
@@ -439,6 +430,11 @@ function geshifilter_admin_general_settings() {
     '#default_value' => geshifilter_use_format_specific_options(),
     '#description' => t('Enable seperate configuration of the GeSHi filter for each <a href="!input_formats">input format</a>.', array('!input_formats' => url('admin/settings/filters'))),
   );
+  // tags
+  if (!geshifilter_use_format_specific_options()) {
+    $form['geshifilter_tags_and_attributes'] = _geshifilter_tag_and_attribute_settings($format);
+  }
+
   // default language
   $languages = _geshifilter_get_enabled_languages();
   $form['geshifilter_default_language'] = array(
@@ -486,13 +482,6 @@ function geshifilter_admin_general_settings() {
     ),
     '#default_value' => variable_get('geshifilter_code_container', GESHI_HEADER_PRE),
   );
-  // tag and attributes
-  if (!geshifilter_use_format_specific_options()) {
-    $form['geshifilter_tags_and_attributes'] = array_merge(array(
-      '#type' => 'fieldset',
-      '#title' => t('Generic tags and attributes'),
-    ), _geshifilter_tag_and_attribute_settings($format));
-  }
   return system_settings_form($form);
 }
 
@@ -633,20 +622,6 @@ function geshifilter_tags($format = 0) {
   return variable_get("geshifilter_tags_{$format}", geshifilter_tags());
 }
 
-function geshifilter_attributes($format = NULL) {
-  if (!geshifilter_use_format_specific_options() || $format==0) {
-    return variable_get('geshifilter_attributes', 'type lang');
-  }
-  return variable_get("geshifilter_attributes_{$format}", geshifilter_attributes());
-}
-
-function geshifilter_linenumber_attributes($format = NULL) {
-  if (!geshifilter_use_format_specific_options() || $format==0) {
-    return variable_get('geshifilter_linenumber_attributes', 'start');
-  }
-  return variable_get("geshifilter_linenumber_attributes_{$format}", geshifilter_linenumber_attributes());
-}
-
 function geshifilter_language_tags($language, $format = NULL) {
   if (!geshifilter_use_format_specific_options() || $format == NULL)
     return variable_get("geshifilter_language_tags_{$language}", '');
@@ -722,8 +697,8 @@ function geshifilter_process($format, $text) {
 
   $tags = array_merge($generic_code_tags, $language_tags);
   $tags_string = implode('|', $tags);
-  $lang_attributes = _geshifilter_whitespace_explode(geshifilter_attributes($format));
-  $linenumber_attributes = _geshifilter_whitespace_explode(geshifilter_linenumber_attributes($format));
+  $lang_attributes = _geshifilter_whitespace_explode(GESHIFILTER_LANGUAGE_ATTRIBUTES);
+  $linenumber_attributes = _geshifilter_whitespace_explode(GESHIFILTER_LINENUMBER_ATTRIBUTES);
   $attributes_string = implode('|', array_merge($lang_attributes, $linenumber_attributes));
 
   // todo: maybe change to preg_replace_callback, should be faster
