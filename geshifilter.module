@@ -306,7 +306,7 @@ function _geshifilter_require_once_geshi_library($use_cache=TRUE, $geshi_dir=NUL
 /**
  * Helper function for some settings form fields usable as general and specific settings
  */
-function _geshifilter_tag_and_attribute_settings($format) {
+function _geshifilter_general_highlight_tags_settings($format=NULL) {
   $form = array();
   $f = ($format === NULL) ? '' : "_$format";
   $form["geshifilter_tags$f"] = array(
@@ -330,7 +330,7 @@ function geshifilter_filter_settings($format) {
   );
   if (geshifilter_use_format_specific_options()) {
     // tags and attributes
-    $form['geshifilter']['tags_and_attributes'] = _geshifilter_tag_and_attribute_settings($format);
+    $form['geshifilter']['general_tags'] = _geshifilter_general_highlight_tags_settings($format);
     // per language tags
     $form['geshifilter']['per_language_settings'] = array(
       '#type' => 'fieldset',
@@ -466,7 +466,7 @@ function geshifilter_admin_general_settings() {
   );
   // tags
   if (!geshifilter_use_format_specific_options()) {
-    $form['geshifilter_tags_and_attributes'] = _geshifilter_tag_and_attribute_settings($format);
+    $form['geshifilter_general_tags'] = _geshifilter_general_highlight_tags_settings();
   }
 
   // default language
@@ -538,7 +538,8 @@ function geshifilter_admin_general_settings() {
  * Pre render function for admin settings
  */
 function geshifilter_admin_general_settings_pre_render($form_id, $form) {
- if ($form_id == 'geshifilter_admin_general_settings') {
+  // warn if GeSHi library is not found
+  if ($form_id == 'geshifilter_admin_general_settings') {
     if (isset($form['geshifilter_geshi_library_not_found'])) {
       form_set_error('geshifilter_geshi_dir', $form['geshifilter_geshi_library_not_found']['#value']);
     }
