@@ -697,7 +697,7 @@ function _geshifilter_whitespace_explode($string) {
 }
 
 function _geshifilter_tag_split($string) {
-  return preg_split('/\s+|<|>/', $string, -1, PREG_SPLIT_NO_EMPTY);
+  return preg_split('/\s+|<|>|\[|\]/', $string, -1, PREG_SPLIT_NO_EMPTY);
 }
 
 // General settings
