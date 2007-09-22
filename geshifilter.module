@@ -175,7 +175,7 @@ function geshifilter_filter_tips($delta, $format, $long = false) {
     // line numbering options
     $items[] = t('<em>Line numbering</em> can be enabled/disabled with the attribute "%linenumbers". Possible values are: "%off" for no line numbers, "%normal" for normal line numbers and "%fancy" for fancy line numbers (every n<sup>th</sup> line number highlighted). The start line number can be specified with the attribute "%start", which implicitly enables normal line numbering. For fancy line numbering the interval for the highlighted line numbers can be specified with the attribute "%fancy", which implicitly enables fancy line numbering.', array('%linenumbers' => GESHIFILTER_ATTRIBUTE_LINE_NUMBERING, '%off' => 'off', '%normal' => 'normal', '%fancy' => 'fancy', '%start' => GESHIFILTER_ATTRIBUTE_LINE_NUMBERING_START, '%fancy' => GESHIFILTER_ATTRIBUTE_FANCY_N));
     $items[] = t('If the source code between the tags contains a newline (e.g. immediatly after the opening tag), the highlighted source code will be displayed as a code block. Otherwise it will be displayed inline.');
-    if (_geshifilter_brackets() == GESHIFILTER_BRACKETS_BOTH) {
+    if (_geshifilter_brackets($format) == GESHIFILTER_BRACKETS_BOTH) {
       $items[] = t('Beside the tag style "!angle" it is also possible to use "!bracket".' , array('!angle' => '<code>&lt;foo&gt;</code>', '!bracket' => '<code>[foo]</code>'));
     }
     $output .= theme('item_list', $items);
@@ -262,7 +262,7 @@ function geshifilter_filter_tips($delta, $format, $long = false) {
       $tags[] = '<code>'. $bracket_open . $tag . $bracket_close .'</code>';
     }
     $output = t('You can enable syntax highlighting of source code with the following tags: !tags.', array('!tags' => implode(', ', $tags)));
-    if (_geshifilter_brackets() == GESHIFILTER_BRACKETS_BOTH) {
+    if (_geshifilter_brackets($format) == GESHIFILTER_BRACKETS_BOTH) {
       $output .= ' '. t('Beside the tag style "!angle" it is also possible to use "!bracket".' , array('!angle' => '<code>&lt;foo&gt;</code>', '!bracket' => '<code>[foo]</code>'));
     }
     return $output;
@@ -705,22 +705,22 @@ function geshifilter_use_format_specific_options() {
   return variable_get('geshifilter_format_specific_options', FALSE);
 }
 
-function geshifilter_tags($format = 0) {
-  if (!geshifilter_use_format_specific_options() || $format==0) {
+function geshifilter_tags($format = NULL) {
+  if (!geshifilter_use_format_specific_options() || $format === NULL) {
     return variable_get('geshifilter_tags', 'code blockcode');
   }
   return variable_get("geshifilter_tags_{$format}", geshifilter_tags());
 }
 
-function _geshifilter_brackets($format=NULL) {
-  if (!geshifilter_use_format_specific_options() || $format==NULL) {
+function _geshifilter_brackets($format = NULL) {
+  if (!geshifilter_use_format_specific_options() || $format === NULL) {
     return variable_get('geshifilter_brackets', GESHIFILTER_BRACKETS_BOTH);
   }
   return variable_get("geshifilter_brackets_{$format}", _geshifilter_brackets());
 }
 
 function geshifilter_language_tags($language, $format = NULL) {
-  if (!geshifilter_use_format_specific_options() || $format == NULL)
+  if (!geshifilter_use_format_specific_options() || $format === NULL)
     return variable_get("geshifilter_language_tags_{$language}", '');
   return variable_get("geshifilter_language_tags_{$language}_{$format}", geshifilter_language_tags($language));
 }
