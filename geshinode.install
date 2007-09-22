@@ -1,0 +1,39 @@
+<?php
+// $Id$
+
+/**
+ * Create tables on install
+ */
+function geshinode_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      $result = db_query("CREATE TABLE {geshinode} (
+        vid int unsigned NOT NULL default '0',
+        nid int unsigned NOT NULL default '0',
+        language VARCHAR(64) NOT NULL default '',
+        PRIMARY KEY (nid, vid),
+        UNIQUE KEY vid (vid),
+        KEY nid (nid)
+        ) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+      );
+      if ($result) {
+        drupal_set_message('Installed geshinode database table.');
+      }
+      break;
+    case 'pgsql':
+      drupal_set_message('No PgSQL support.', 'error');
+      return;
+    default:
+      drupal_set_message(t('Unsupported database.'), 'error');
+      return;
+  }
+}
+
+/**
+ * Remove tables on uninstall.
+ */
+function geshinode_uninstall() {
+  db_query("DROP TABLE {geshinode}");
+  drupal_set_message('Removed geshinode database table.');
+}

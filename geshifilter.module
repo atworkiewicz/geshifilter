@@ -945,7 +945,7 @@ function _geshifilter_replace_callback($match) {
 /**
  * GeSHi parse function
  */
-function geshifilter_geshi_process($source_code, $lang, $line_numbering, $linenumbers_start, $inline_mode) {
+function geshifilter_geshi_process($source_code, $lang, $line_numbering=0, $linenumbers_start=1, $inline_mode=FALSE) {
   // load GeSHi library (if not already)
   $geshi_library = _geshifilter_check_geshi_library();
   if (!$geshi_library['loaded']) {
