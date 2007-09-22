@@ -975,6 +975,7 @@ function geshifilter_geshi_process($source_code, $lang, $line_numbering=0, $line
   }
   else {
     // block source code mode
+    $geshi->set_overall_class('geshifilter '. $lang);
     $geshi->set_header_type((int)variable_get('geshifilter_code_container', GESHI_HEADER_PRE));
     if ($line_numbering == 1) {
       $geshi->enable_line_numbers(GESHI_NORMAL_LINE_NUMBERS);
@@ -984,7 +985,6 @@ function geshifilter_geshi_process($source_code, $lang, $line_numbering=0, $line
       $geshi->enable_line_numbers(GESHI_FANCY_LINE_NUMBERS, $line_numbering);
       $geshi->start_line_numbers_at($linenumbers_start);
     }
-    $geshi->set_overall_class('geshifilter '. $lang);
     $source_code = $geshi->parse_code();
   }
   return $source_code;
