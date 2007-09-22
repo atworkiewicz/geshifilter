@@ -135,15 +135,9 @@ function geshinode_load($node) {
 function geshinode_view($node, $teaser = FALSE, $page = FALSE) {
   $node->readmore = (strlen($node->teaser) < strlen($node->body));
   $line_numbering = variable_get('geshinode_line_numbering', GESHIFILTER_LINE_NUMBERS_DEFAULT_NONE);
-  if ($teaser == FALSE) {
-    $node->body = geshifilter_geshi_process($node->body, $node->language, $line_numbering);
-  }
-  else {
-    $node->teaser = geshifilter_geshi_process($node->teaser, $node->language, $line_numbering);
-  }
-
+  $source_code = $teaser ? $node->teaser : $node->body;
   $node->content['body'] = array(
-    '#value' => $teaser ? $node->teaser : $node->body,
+    '#value' => geshifilter_geshi_process($source_code, $node->language, $line_numbering),
     '#weight' => 0,
   );
   return $node;
