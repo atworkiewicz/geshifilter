@@ -299,38 +299,53 @@ function _geshifilter_get_geshi_dir() {
 }
 
 /**
- * Helper function for loading/checking the GeSHi library (if not already)
- * Returns NULL on success or an error message on failure.
+ * Helper function for loading/checking the GeSHi library v 1.0.x (if not already)
+ * Returns an array with keys 'success', 'loaded' and 'message'
  */
-function _geshifilter_require_once_geshi_library($use_cache=TRUE, $geshi_dir=NULL, $load_when_found=TRUE) {
-  static $geshi_library_errmsg_cache = NULL;
-  if ($use_cache && $geshi_library_errmsg_cache !== NULL) {
+function _geshifilter_check_geshi_library($use_cache=TRUE, $geshi_dir=NULL, $load_when_found=TRUE) {
+  static $geshi_library_cache = NULL;
+  if ($use_cache && $geshi_library_cache !== NULL) {
     // get from cache
-    $geshi_library_errmsg = $geshi_library_errmsg_cache;
+    $geshi_library = $geshi_library_cache;
   }
   else {
+    // initialisation
+    $geshi_library = array('success' => NULL, 'loaded' => FALSE, 'message' => NULL);
     // no cache
     if (!$geshi_dir) {
       $geshi_dir = _geshifilter_get_geshi_dir();
     }
     if (!is_dir($geshi_dir)) {
-      $geshi_library_errmsg = t('%dir is not a directory.', array('%dir' => $geshi_dir));
+      $geshi_library['success'] = FALSE;
+      $geshi_library['message'] = t('GeSHi library error: %dir is not a directory.', array('%dir' => $geshi_dir));
     }
     elseif (is_file($geshi_dir .'/geshi.php')) {
-      // GeSHi 1.0.x found
+      // GeSHi 1.0.x found (probably, we can only be sure by loading it)
+      $geshi_library['success'] = TRUE;
       if ($load_when_found) {
         require_once($geshi_dir .'/geshi.php');
+        // check version
+        $geshi_library_version = explode('.',GESHI_VERSION);
+        if (!($geshi_library_version[0] == '1' &&  $geshi_library_version[1] == '0')) {
+          $geshi_library['success'] = FALSE;
+          $geshi_library['loaded'] = FALSE;
+          $geshi_library['message'] = t('GeSHi library error: The detected version of GeSHi library (%version) is not supported. A version from the 1.0.x branch is required.', array('%version' => GESHI_VERSION));
+        }
+        else {
+          $geshi_library['loaded'] = TRUE;
+        }
       }
     }
     else {
-      $geshi_library_errmsg = t('Could not find a known version of the GeSHi library at %dir.' , array('%dir' => $geshi_dir));
+      $geshi_library['success'] = FALSE;
+      $geshi_library['message'] = t('GeSHi library error: Could not find a known version of the GeSHi library at %dir.' , array('%dir' => $geshi_dir));
     }
     // store in cache if needed
     if ($use_cache) {
-      $geshi_library_errmsg_cache = $geshi_library_errmsg;
+      $geshi_library_cache = $geshi_library;
     }
   }
-  return $geshi_library_errmsg;
+  return $geshi_library;
 }
 
 /**
@@ -482,8 +497,8 @@ function geshifilter_admin_general_settings() {
     '#description' => t('Specify the path to the GeSHi library directory (which contains a file called <em>geshi.php</em>). After changing the path, it is necessary to save and refresh this settings page to see if GeSHi was successfully detected.')
   );
   // try to load GeSHi library and get version if successful
-  $geshi_library_errmsg = _geshifilter_require_once_geshi_library();
-  if ($geshi_library_errmsg === NULL) {
+  $geshi_library = _geshifilter_check_geshi_library();
+  if ($geshi_library['loaded']) {
     // show detected version
     $form['geshi_library']['geshifilter_detected_version'] = array(
       '#value' => t('Detected version: %version', array('%version' => GESHI_VERSION)), // GESHI_VERSION is defined in GeSHi library
@@ -491,9 +506,9 @@ function geshifilter_admin_general_settings() {
   }
   else {
     // save error condition for pre render phase
-    $form['geshifilter_geshi_library_not_found'] = array(
+    $form['geshifilter_geshi_library_error'] = array(
       '#type' => 'value',
-      '#value' => $geshi_library_errmsg,
+      '#value' => $geshi_library['message'],
     );
     $form['#pre_render']['geshifilter'] = 'geshifilter_admin_general_settings_pre_render';
   }
@@ -581,8 +596,8 @@ function geshifilter_admin_general_settings() {
 function geshifilter_admin_general_settings_pre_render($form_id, $form) {
   // warn if GeSHi library is not found
   if ($form_id == 'geshifilter_admin_general_settings') {
-    if (isset($form['geshifilter_geshi_library_not_found'])) {
-      form_set_error('geshifilter_geshi_dir', $form['geshifilter_geshi_library_not_found']['#value']);
+    if (isset($form['geshifilter_geshi_library_error'])) {
+      form_set_error('geshifilter_geshi_dir', $form['geshifilter_geshi_library_error']['#value']);
     }
   }
 }
@@ -593,9 +608,9 @@ function geshifilter_admin_general_settings_pre_render($form_id, $form) {
 function geshifilter_admin_general_settings_validate($form_id, $form_values) {
   if ($form_id == 'geshifilter_admin_general_settings') {
     // try to load GeSHi library from given dir
-    $geshi_library_errmsg = _geshifilter_require_once_geshi_library(FALSE, $form_values['geshifilter_geshi_dir'], FALSE);
-    if ($geshi_library_errmsg !== NULL) {
-      form_set_error('geshifilter_geshi_dir', $geshi_library_errmsg);
+    $geshi_library = _geshifilter_check_geshi_library(FALSE, $form_values['geshifilter_geshi_dir'], FALSE);
+    if (!$geshi_library['success']) {
+      form_set_error('geshifilter_geshi_dir', $geshi_library['message']);
     }
   }
 }
@@ -605,10 +620,10 @@ function geshifilter_admin_general_settings_validate($form_id, $form_values) {
  */
 function geshifilter_admin_per_language_settings($view = 'enabled') {
   $form = array();
-  // check GeSHi library
-  $geshi_library_errmsg = _geshifilter_require_once_geshi_library();
-  if ($geshi_library_errmsg !== NULL) {
-    drupal_set_message($geshi_library_errmsg, 'error');
+  // check if GeSHi library is available
+  $geshi_library = _geshifilter_check_geshi_library();
+  if (!$geshi_library['success']) {
+    drupal_set_message($geshi_library['message'], 'error');
     return;
   }
   $add_checkbox = TRUE;
@@ -624,10 +639,10 @@ function geshifilter_admin_per_language_settings($view = 'enabled') {
 function geshifilter_admin_filter_conflicts() {
   // start
   $output = '';
-  // check GeSHi library
-  $geshi_library_errmsg = _geshifilter_require_once_geshi_library();
-  if ($geshi_library_errmsg !== NULL) {
-    drupal_set_message($geshi_library_errmsg, 'error');
+  // check if GeSHi library is available
+  $geshi_library = _geshifilter_check_geshi_library();
+  if (!$geshi_library['success']) {
+    drupal_set_message($geshi_library['message'], 'error');
     return $output;
   }
   $alerts = array();
@@ -751,8 +766,8 @@ function geshifilter_language_tags($language, $format = NULL) {
 function _geshifilter_get_available_languages() {
   $available_languages = array();
   $geshi_dirname = _geshifilter_get_geshi_dir();
-  $geshi_library_errmsg = _geshifilter_require_once_geshi_library();
-  if ($geshi_library_errmsg === NULL) {
+  $geshi_library = _geshifilter_check_geshi_library();
+  if ($geshi_library['success']) {
     foreach (file_scan_directory($geshi_dirname .'/geshi/', '\.[pP][hH][pP]$') as $filename => $fileinfo) {
       $available_languages[$fileinfo->name] = $fileinfo->name;
     }
@@ -807,9 +822,9 @@ function _geshifilter_get_tags($format) {
  */
 function _geshifilter_process($format, $text) {
   // load GeSHi library (if not already)
-  $geshi_library_errmsg = _geshifilter_require_once_geshi_library();
-  if ($geshi_library_errmsg !== NULL) {
-    drupal_set_message($geshi_library_errmsg, 'error');
+  $geshi_library = _geshifilter_check_geshi_library();
+  if (!$geshi_library['success']) {
+    drupal_set_message($geshi_library['message'], 'error');
     return $text;
   }
   // get the available tags
@@ -919,7 +934,24 @@ function _geshifilter_replace_callback($match) {
     // use plain text 'highlighting'
     $lang = 'text';
   }
+  $inline_mode = (strpos($source_code, "\n") === FALSE);
+  // process with GeSHi
+  $source_code = geshifilter_geshi_process($source_code, $lang, $line_numbering, $linenumbers_start, $inline_mode);
+  // return highlighted source code
+  return $source_code;
+}
 
+
+/**
+ * GeSHi parse function
+ */
+function geshifilter_geshi_process($source_code, $lang, $line_numbering, $linenumbers_start, $inline_mode) {
+  // load GeSHi library (if not already)
+  $geshi_library = _geshifilter_check_geshi_library();
+  if (!$geshi_library['loaded']) {
+    drupal_set_message($geshi_library['message'], 'error');
+    return $source_code;
+  }
   // decode html entities, GeSHi will reencode these
   $source_code = decode_entities($source_code);
   // remove newline (<br/>) and paragraph (<p>) formatting, GeSHi will add these again
@@ -936,7 +968,12 @@ function _geshifilter_replace_callback($match) {
   $geshi->set_line_style('font-family: monospace; font-weight: normal;', 'font-family: monospace; font-weight: bold; font-style: italic;');
   $geshi->set_code_style('font-family: monospace; font-weight: normal; font-style: normal');
   // some more GeSHi settings and parsing
-  if (strpos($source_code, "\n") !== FALSE) {
+  if ($inline_mode) {
+    // inline source code mode
+    $geshi->set_header_type(GESHI_HEADER_NONE);
+    $source_code = '<code class="geshifilter '. $lang .'">'. $geshi->parse_code() .'</code>';
+  }
+  else {
     // block source code mode
     $geshi->set_header_type((int)variable_get('geshifilter_code_container', GESHI_HEADER_PRE));
     if ($line_numbering == 1) {
@@ -950,16 +987,8 @@ function _geshifilter_replace_callback($match) {
     $geshi->set_overall_class('geshifilter '. $lang);
     $source_code = $geshi->parse_code();
   }
-  else {
-    // inline source code mode
-    $geshi->set_header_type(GESHI_HEADER_NONE);
-    $source_code = '<code class="geshifilter '. $lang .'">'. $geshi->parse_code() .'</code>';
-  }
-  // return highlighted source code
   return $source_code;
 }
-
-
 /**
  * callback function for clearing the filter cache
  */
