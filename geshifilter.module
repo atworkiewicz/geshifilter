@@ -233,7 +233,7 @@ function geshifilter_filter_tips($delta, $format, $long = false) {
         t('Code block with syntax highlighting for %lang source code<br /> and normal line numbers.', array('%lang' => $lang)),
       );
       $rows[] = array(
-        '<code>'. $generic_code_tag_open .' '. $lang_attributes[2 % count($lang_attributes)] .'="' . $lang .'" ' .' '. GESHIFILTER_ATTRIBUTE_LINE_NUMBERING_START .'="23" '. GESHIFILTER_ATTRIBUTE_FANCY_N .'="7"'. $bracket_close .'<br />foo = "bar";<br />baz = "foz";<br />'. $generic_code_tag_close .'</code>',
+        '<code>'. $generic_code_tag_open .' '. $lang_attributes[2 % count($lang_attributes)] .'="'. $lang .'" '. GESHIFILTER_ATTRIBUTE_LINE_NUMBERING_START .'="23" '. GESHIFILTER_ATTRIBUTE_FANCY_N .'="7"'. $bracket_close .'<br />foo = "bar";<br />baz = "foz";<br />'. $generic_code_tag_close .'</code>',
         t('Code block with syntax highlighting for %lang source code,<br />line numbers starting from 23<br /> and highlighted line numbers every 7<sup>th</sup> line.', array('%lang' => $lang)),
       );
     }
@@ -244,7 +244,7 @@ function geshifilter_filter_tips($delta, $format, $long = false) {
         t('Code block with syntax highlighting for %lang source code.', array('%lang' => $tag_to_lang[$language_tag])),
       );
       $rows[] = array(
-        '<code>'. $bracket_open . $language_tag . ' '. GESHIFILTER_ATTRIBUTE_LINE_NUMBERING_START .'="23" '. GESHIFILTER_ATTRIBUTE_FANCY_N .'="7"'. $bracket_close .'<br />foo = "bar";<br />baz = "foz";<br />'. $bracket_open . $language_tag . $bracket_close .'</code>',
+        '<code>'. $bracket_open . $language_tag .' '. GESHIFILTER_ATTRIBUTE_LINE_NUMBERING_START .'="23" '. GESHIFILTER_ATTRIBUTE_FANCY_N .'="7"'. $bracket_close .'<br />foo = "bar";<br />baz = "foz";<br />'. $bracket_open . $language_tag . $bracket_close .'</code>',
         t('Code block with syntax highlighting for %lang source code,<br />line numbers starting from 23<br /> and highlighted line numbers every 7<sup>th</sup> line.', array('%lang' => $tag_to_lang[$language_tag])),
       );
     }
