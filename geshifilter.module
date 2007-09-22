@@ -630,31 +630,49 @@ function geshifilter_admin_filter_conflicts() {
     drupal_set_message($geshi_library_errmsg, 'error');
     return $output;
   }
-  // some known filters that should come before GeSHi filter
-  $conflicting_after_filters = array('filter/0', 'pearwiki_filter/0');
+  $alerts = array();
+  // some known order conflict filters
+  $order_conflict_filters = array(
+    'filter/0' => array( // HTML filter
+      'order' => 'after',
+      'description' => 'It is recommended to put %geshifilter after %cfilter to prevent loss of layout and highlighting.',
+    ),
+    'filter/2' => array( // line break convertor
+      'order' => 'before',
+      'description' => 'It is suggested to put %geshifilter before %cfilter to prevent issues with inline source code.',
+    ),
+    'pearwiki_filter/0' => array(
+      'order' => 'after',
+      'description' => 'It is recommended to put %geshifilter after %cfilter.',
+    )
+  );
   foreach (filter_formats() as $format => $input_format) {
     // Get the filters in this input format
     $filters = filter_list_format($format);
     // look if GeSHi is enabled in this input format
     if (isset($filters['geshifilter/0'])) {
       $geshifilter = $filters['geshifilter/0'];
-      $output .= '<h3>'. t('Input format !input_format', array('!input_format' => l(t($input_format->name), "/admin/settings/filters/$format"))) . '</h3>';
-      $alerts = array();
       // Check if possibly conflicting filters are also present in input format
-      foreach ($conflicting_after_filters as $key) {
-        if (array_key_exists($key, $filters)) {
-          $cfilter = $filters[$key];
-          if ($cfilter->weight >= $geshifilter->weight) {
+      foreach ($order_conflict_filters as $filter_key => $conflict_info) {
+        // does this filter exist in the input format?
+        if (array_key_exists($filter_key, $filters)) {
+          $cfilter = $filters[$filter_key];
+          if (($conflict_info['order'] == 'after' && $geshifilter->weight <= $cfilter->weight)
+            || ($conflict_info['order'] == 'before' && $geshifilter->weight >= $cfilter->weight)
+          ) {
             $alerts[] = array(
+              l(t($input_format->name), "/admin/settings/filters/$format"),
               $cfilter->name,
-              t('%geshifilter should come after %cfilter', array('%cfilter' => $cfilter->name, '%geshifilter' => $geshifilter->name)),
+              t($conflict_info['description'], array('%cfilter' => $cfilter->name, '%geshifilter' => $geshifilter->name)),
               l(t('Rearrange filters'), "/admin/settings/filters/$format/order", array(), drupal_get_destination()),
             );
           }
         }
       }
       // check HTML filter allowed tags
-      if (isset($filters['filter/0'])) {
+      if (isset($filters['filter/0']) && ($filters['filter/0']->weight <= $geshifilter->weight)
+        && (_geshifilter_brackets($format)==GESHIFILTER_BRACKETS_ANGLE || _geshifilter_brackets($format) == GESHIFILTER_BRACKETS_BOTH)
+      ) {
         $cfilter = $filters['filter/0'];
         $html_filter_allowed_tags = preg_split('/\s+|<|>/', variable_get("allowed_html_$format", '<a> <em> <strong> <cite> <code> <ul> <ol> <li> <dl> <dt> <dd>'), -1, PREG_SPLIT_NO_EMPTY);
         // collect geshifilter tags
@@ -663,6 +681,7 @@ function geshifilter_admin_filter_conflicts() {
         foreach ($geshifilter_tags as $tag) {
           if (!in_array($tag, $html_filter_allowed_tags)) {
             $alerts[] = array(
+              l(t($input_format->name), "/admin/settings/filters/$format"),
               $cfilter->name,
               t('%cfilter will remove %tag tags', array('%cfilter' => $cfilter->name, '%tag' => "<$tag>")),
               t('Add tag %tag to !allowed_html_tags', array(
@@ -676,14 +695,15 @@ function geshifilter_admin_filter_conflicts() {
           }
         }
       }
-      // show alerts
-      if (count($alerts) == 0) {
-        $alerts[] = array(array('data' => t('No known conflicts were detected.'), 'colspan' => 4));
-      }
-      $header = array(t('Filter'), t('Conflict description'), t('Possible solutions'));
-      $output .= theme('table', $header, $alerts);
     }
   }
+    // show alerts
+  if (count($alerts) == 0) {
+    $alerts[] = array(array('data' => t('No known filter conflicts were detected.'), 'colspan' => 4));
+  }
+  $header = array(t('Input format'), t('Filter'), t('Description'), t('Possible solutions'));
+  $output .= theme('table', $header, $alerts);
+
   return $output;
 }
 
