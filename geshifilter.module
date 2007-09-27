@@ -832,15 +832,19 @@ function _geshifilter_process($format, $text) {
   $tags = array_merge($generic_code_tags, $language_tags);
   $tags_string = implode('|', $tags);
 
+  // Pattern for matching "<code>...</code>" like stuff
+  // Also matches "<code>...$"  where "$" refers to end of string, not end of
+  // line (because PCRE_MULTILINE (modifier 'm') is not enabled), so matching
+  // still works when teaser view trims inside the source code.
   switch (_geshifilter_brackets($format)) {
     case GESHIFILTER_BRACKETS_ANGLE:
-      $pattern = '#<('. $tags_string .')([^>]*)>(.*?)</\1\s*>#s';
+      $pattern = '#<('. $tags_string .')([^>]*)>(.*?)(</\1\s*>|$)#s';
       break;
     case GESHIFILTER_BRACKETS_SQUARE:
-      $pattern = '#\[('. $tags_string .')([^\]]*)\](.*?)\[/\1\s*\]#s';
+      $pattern = '#\[('. $tags_string .')([^\]]*)\](.*?)(\[/\1\s*\]|$)#s';
       break;
     case GESHIFILTER_BRACKETS_BOTH:
-      $pattern = '#[<\[]('. $tags_string .')([^>\]]*)[>\]](.*?)[<\[]/\1\s*[>\]]#s';
+      $pattern = '#[<\[]('. $tags_string .')([^>\]]*)[>\]](.*?)([<\[]/\1\s*[>\]]|$)#s';
       break;
   }
 
