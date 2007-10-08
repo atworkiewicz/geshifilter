@@ -708,10 +708,10 @@ function geshifilter_admin_filter_conflicts() {
             || ($conflict_info['order'] == 'before' && $geshifilter->weight >= $cfilter->weight)
           ) {
             $alerts[] = array(
-              l(t($input_format->name), "/admin/settings/filters/$format"),
+              l(t($input_format->name), "admin/settings/filters/$format"),
               $cfilter->name,
               t($conflict_info['description'], array('%cfilter' => $cfilter->name, '%geshifilter' => $geshifilter->name)),
-              l(t('Rearrange filters'), "/admin/settings/filters/$format/order", array(), drupal_get_destination()),
+              l(t('Rearrange filters'), "admin/settings/filters/$format/order", array(), drupal_get_destination()),
             );
           }
         }
@@ -728,7 +728,7 @@ function geshifilter_admin_filter_conflicts() {
         foreach ($geshifilter_tags as $tag) {
           if (!in_array($tag, $html_filter_allowed_tags)) {
             $alerts[] = array(
-              l(t($input_format->name), "/admin/settings/filters/$format"),
+              l(t($input_format->name), "admin/settings/filters/$format"),
               $cfilter->name,
               t('%cfilter will remove %tag tags', array('%cfilter' => $cfilter->name, '%tag' => "<$tag>")),
               t('Add tag %tag to !allowed_html_tags', array(
@@ -736,7 +736,7 @@ function geshifilter_admin_filter_conflicts() {
                 '!allowed_html_tags' => l(t('"%allowed_html_tags" of %cfilter', array(
                   '%allowed_html_tags' => t('Allowed HTML tags'),
                   '%cfilter' => $cfilter->name,
-                  )), "/admin/settings/filters/$format/configure", array(), drupal_get_destination(), NULL, FALSE, TRUE)
+                  )), "admin/settings/filters/$format/configure", array(), drupal_get_destination(), NULL, FALSE, TRUE)
               )),
             );
           }
