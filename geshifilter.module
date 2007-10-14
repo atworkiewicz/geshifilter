@@ -517,6 +517,8 @@ function geshifilter_admin_general_settings() {
   $form['geshi_library'] = array(
     '#type' => 'fieldset',
     '#title' => t('GeSHi library'),
+    '#description' => t('The GeSHi filter requires the GeSHi library. You need to <a href="!geshi">download</a> and install it seperately.',
+      array('!geshi' => url('http://qbnz.com/highlighter/'))),
   );
   $form['geshi_library']['geshifilter_geshi_dir'] = array(
     '#type' => 'textfield',
@@ -668,13 +670,15 @@ function geshifilter_admin_per_language_settings($view = 'enabled') {
 /**
  * Menu callback for filter conflicts page
  */
-function geshifilter_admin_filter_conflicts() {
+function geshifilter_admin_filter_conflicts($check_only=FALSE) {
   // start
   $output = '';
   // check if GeSHi library is available
   $geshi_library = _geshifilter_check_geshi_library();
   if (!$geshi_library['success']) {
-    drupal_set_message($geshi_library['message'], 'error');
+    if (!$check_only) {
+      drupal_set_message($geshi_library['message'], 'error');
+    }
     return $output;
   }
   $alerts = array();
@@ -744,14 +748,56 @@ function geshifilter_admin_filter_conflicts() {
       }
     }
   }
-    // show alerts
-  if (count($alerts) == 0) {
-    $alerts[] = array(array('data' => t('No known filter conflicts were detected.'), 'colspan' => 4));
+  if ($check_only) {
+    return count($alerts) != 0;
   }
-  $header = array(t('Input format'), t('Filter'), t('Description'), t('Possible solutions'));
-  $output .= theme('table', $header, $alerts);
+  else {
+    // show alerts
+    if (count($alerts) == 0) {
+      $alerts[] = array(array('data' => t('No known filter conflicts were detected.'), 'colspan' => 4));
+    }
+    $header = array(t('Input format'), t('Filter'), t('Description'), t('Possible solutions'));
+    $output .= theme('table', $header, $alerts);
+    return $output;
+  }
+}
 
-  return $output;
+/**
+ * Implementation of hook_requirements()
+ */
+function geshifilter_requirements($phase) {
+  $requirements = array();
+  if ($phase == 'runtime') {
+    // check if GeSHi library is available
+    $geshi_library = _geshifilter_check_geshi_library();
+    if (!$geshi_library['loaded']) {
+      $requirements[] = array(
+        'title' => 'GeSHi filter',
+        'value' => t('GeSHi library not found.'),
+        'description' => t('You should install the GeSHi library and set its path in the !geshisettings.',
+          array('!geshisettings' => l('GeSHi settings', 'admin/settings/geshifilter'))),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+    else {
+      $requirements[] = array(
+        'title' => 'GeSHi filter',
+        'value' => t('Found GeSHi library version %version',
+          array('%version' => GESHI_VERSION)), // GESHI_VERSION is defined in GeSHi library
+        'severity' => REQUIREMENT_OK,
+      );
+    }
+    // check for filter conflicts
+    if (geshifilter_admin_filter_conflicts(TRUE)) {
+      $requirements[] = array(
+        'title' => 'GeSHi filter',
+        'value' => t('Some filter conflicts were detected.'),
+        'description' => l(t('View and resolve the detected filter conflicts'), 'admin/settings/geshifilter/filterconflicts'),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+  }
+  return $requirements;
 }
 
 /**
