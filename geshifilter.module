@@ -802,8 +802,8 @@ function _geshifilter_get_available_languages() {
   if ($available_languages === NULL) {
     // not in cache: build the array of available_languages
     $geshi_library = _geshifilter_check_geshi_library();
+    $available_languages = array();
     if ($geshi_library['success']) {
-      $available_languages = array();
       $geshi_dirname = _geshifilter_get_geshi_dir();
       foreach (file_scan_directory($geshi_dirname .'/geshi/', '\.[pP][hH][pP]$') as $filename => $fileinfo) {
         // short name
@@ -895,7 +895,6 @@ function _geshifilter_process($format, $text) {
       $pattern = '#[<\[]('. $tags_string .')([^>\]]*)[>\]](.*?)([<\[]/\1\s*[>\]]|$)#s';
       break;
   }
-
   return preg_replace_callback($pattern, '_geshifilter_replace_callback', $text);
 }
 
