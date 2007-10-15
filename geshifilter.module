@@ -298,6 +298,9 @@ function geshifilter_filter($op, $delta = 0, $format = -1, $text = '') {
     case 'description':
       return t('Enables syntax highlighting of inline/block source code using the GeSHi engine');
 
+    case 'prepare':
+      return _geshifilter_prepare($format, $text);
+
     case 'process':
       return _geshifilter_process($format, $text);
 
@@ -686,11 +689,7 @@ function geshifilter_admin_filter_conflicts($check_only=FALSE) {
   $order_conflict_filters = array(
     'filter/0' => array( // HTML filter
       'order' => 'after',
-      'description' => 'It is recommended to put %geshifilter after %cfilter to prevent loss of layout and highlighting.',
-    ),
-    'filter/2' => array( // line break convertor
-      'order' => 'before',
-      'description' => 'It is suggested to put %geshifilter before %cfilter to prevent issues with inline source code.',
+      'description' => 'It is required to put %geshifilter after %cfilter to prevent loss of layout and highlighting.',
     ),
     'pearwiki_filter/0' => array(
       'order' => 'after',
@@ -716,32 +715,6 @@ function geshifilter_admin_filter_conflicts($check_only=FALSE) {
               $cfilter->name,
               t($conflict_info['description'], array('%cfilter' => $cfilter->name, '%geshifilter' => $geshifilter->name)),
               l(t('Rearrange filters'), "admin/settings/filters/$format/order", array(), drupal_get_destination()),
-            );
-          }
-        }
-      }
-      // check HTML filter allowed tags
-      if (isset($filters['filter/0']) && ($filters['filter/0']->weight <= $geshifilter->weight)
-        && (_geshifilter_brackets($format)==GESHIFILTER_BRACKETS_ANGLE || _geshifilter_brackets($format) == GESHIFILTER_BRACKETS_BOTH)
-      ) {
-        $cfilter = $filters['filter/0'];
-        $html_filter_allowed_tags = preg_split('/\s+|<|>/', variable_get("allowed_html_$format", '<a> <em> <strong> <cite> <code> <ul> <ol> <li> <dl> <dt> <dd>'), -1, PREG_SPLIT_NO_EMPTY);
-        // collect geshifilter tags
-        list($generic_code_tags, $language_tags, $tag_to_lang) = _geshifilter_get_tags($format);
-        $geshifilter_tags = array_merge($generic_code_tags, $language_tags);
-        foreach ($geshifilter_tags as $tag) {
-          if (!in_array($tag, $html_filter_allowed_tags)) {
-            $alerts[] = array(
-              l(t($input_format->name), "admin/settings/filters/$format"),
-              $cfilter->name,
-              t('%cfilter will remove %tag tags', array('%cfilter' => $cfilter->name, '%tag' => "<$tag>")),
-              t('Add tag %tag to !allowed_html_tags', array(
-                '%tag' => "<$tag>",
-                '!allowed_html_tags' => l(t('"%allowed_html_tags" of %cfilter', array(
-                  '%allowed_html_tags' => t('Allowed HTML tags'),
-                  '%cfilter' => $cfilter->name,
-                  )), "admin/settings/filters/$format/configure", array(), drupal_get_destination(), NULL, FALSE, TRUE)
-              )),
             );
           }
         }
@@ -912,20 +885,13 @@ function _geshifilter_get_tags($format) {
 }
 
 /**
- * geshifilter_filter callback for processing input text.
+ * geshifilter_filter callback for preparing input text.
  */
-function _geshifilter_process($format, $text) {
-  // load GeSHi library (if not already)
-  $geshi_library = _geshifilter_check_geshi_library();
-  if (!$geshi_library['success']) {
-    drupal_set_message($geshi_library['message'], 'error');
-    return $text;
-  }
+function _geshifilter_prepare($format, $text) {
   // get the available tags
   list($generic_code_tags, $language_tags, $tag_to_lang) = _geshifilter_get_tags($format);
   $tags = array_merge($generic_code_tags, $language_tags);
   $tags_string = implode('|', $tags);
-
   // Pattern for matching "<code>...</code>" like stuff
   // Also matches "<code>...$"  where "$" refers to end of string, not end of
   // line (because PCRE_MULTILINE (modifier 'm') is not enabled), so matching
@@ -941,7 +907,46 @@ function _geshifilter_process($format, $text) {
       $pattern = '#[<\[]('. $tags_string .')([^>\]]*)[>\]](.*?)([<\[]/\1\s*[>\]]|$)#s';
       break;
   }
-  return preg_replace_callback($pattern, '_geshifilter_replace_callback', $text);
+  // replace the code container tag brackets
+  // and prepare the container content (newline and angle bracket protection)
+  $text = preg_replace_callback($pattern, '_geshifilter_prepare_callback', $text);
+  return $text;
+}
+
+/**
+ * _geshifilter_prepare callback for preparing input text.
+ * Replaces the code tags brackets with 0xFE and 0xFF
+ * (e.g. "[code]" -> "\xFEcode\xFF").
+ * The used bytes 0xFE and 0xFF are not valid UTF-8 data thus least likely to
+ * cause problems (based on the codefilter module).
+ * Replaces newlines with "&#10;" to prevent issues with the line break filter
+ * Escapes the tricky characters like angle brackets with check_plain() to
+ * prevent messing up by other filters like the HTML filter.
+ */
+function _geshifilter_prepare_callback($match) {
+  return "\xFE". $match[1] . $match[2] ."\xFF"
+    . str_replace(array("\r", "\n"), array('', '&#10;'), check_plain($match[3]))
+    ."\xFE/". $match[1]. "\xFF";
+}
+
+/**
+ * geshifilter_filter callback for processing input text.
+ */
+function _geshifilter_process($format, $text) {
+  // load GeSHi library (if not already)
+  $geshi_library = _geshifilter_check_geshi_library();
+  if (!$geshi_library['success']) {
+    drupal_set_message($geshi_library['message'], 'error');
+    return $text;
+  }
+  // get the available tags
+  list($generic_code_tags, $language_tags, $tag_to_lang) = _geshifilter_get_tags($format);
+  $tags = array_merge($generic_code_tags, $language_tags);
+  $tags_string = implode('|', $tags);
+  // Pattern for matching the prepared "<code>...</code>" stuff
+  $pattern = '#\xFE('. $tags_string .')([^\xFF]*)\xFF(.*?)(\xFE/\1\xFF)#s';
+  $text = preg_replace_callback($pattern, '_geshifilter_replace_callback', $text);
+  return $text;
 }
 
 /**
@@ -956,6 +961,9 @@ function _geshifilter_replace_callback($match) {
   $tag_name = $match[1];
   $tag_attributes = $match[2];
   $source_code = $match[3];
+
+  // Undo linebreak and escaping from preparation phase
+  $source_code = decode_entities($source_code);
 
   // get the possible tags and languages
   list($generic_code_tags, $language_tags, $tag_to_lang) = _geshifilter_get_tags($format);
@@ -1049,10 +1057,6 @@ function geshifilter_geshi_process($source_code, $lang, $line_numbering=0, $line
     drupal_set_message($geshi_library['message'], 'error');
     return $source_code;
   }
-  // decode html entities, GeSHi will reencode these
-  $source_code = decode_entities($source_code);
-  // remove newline (<br/>) and paragraph (<p>) formatting, GeSHi will add these again
-  $source_code = preg_replace('@<p>|</p>|<br\s*/>@', "", $source_code);
   // remove leading/trailing newlines
   $source_code = trim($source_code, "\n\r");
   // create GeSHi object
