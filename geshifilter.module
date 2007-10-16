@@ -932,6 +932,30 @@ function _geshifilter_prepare($format, $text) {
  * prevent messing up by other filters like the HTML filter.
  */
 function _geshifilter_prepare_callback($match) {
+  // get the default highlighting mode
+  $lang = variable_get('geshifilter_default_highlighting', GESHIFILTER_DEFAULT_PLAINTEXT);
+  if ($lang == GESHIFILTER_DEFAULT_DONOTHING) {
+    // If the default highlighting mode is GESHIFILTER_DEFAULT_DONOTHING
+    // and there is no language attribute, we should not do any escaping in this
+    // prepare phase, so that other filters can do their thing.
+    $language_attributes = _geshifilter_whitespace_explode(GESHIFILTER_ATTRIBUTES_LANGUAGE);
+    $enabled_languages = _geshifilter_get_enabled_languages();
+    $attributes_preg_string = implode('|', $language_attributes);
+    // parse attributes
+    preg_match_all('#('. $attributes_preg_string .')="?([^\s"]*)"?#', $match[2], $attribute_matches);
+    foreach ($attribute_matches[1] as $a_key => $att_name) {
+      $att_value = $attribute_matches[2][$a_key];
+      // check for the language attributes
+      if (in_array($att_name, $language_attributes) && array_key_exists($att_value, $enabled_languages)) {
+        $lang = $att_value;
+      }
+    }
+    if ($lang == GESHIFILTER_DEFAULT_DONOTHING) {
+      // no language set by attributes: prevent escaping and return original string
+      return $match[0];
+    }
+  }
+  // return escaped code block
   return "\xFE". $match[1] . $match[2] ."\xFF"
     . str_replace(array("\r", "\n"), array('', '&#10;'), check_plain($match[3]))
     ."\xFE/". $match[1]. "\xFF";
@@ -1001,8 +1025,7 @@ function _geshifilter_replace_callback($match) {
   foreach ($attribute_matches[1] as $a_key => $att_name) {
     $att_value = $attribute_matches[2][$a_key];
     // check for the language attributes
-    if (in_array($att_name, $language_attributes)) {
-      if (array_key_exists($att_value, $enabled_languages)) {
+    if (in_array($att_name, $language_attributes) && array_key_exists($att_value, $enabled_languages)) {
         $lang = $att_value;
       }
     }
@@ -1053,7 +1076,6 @@ function _geshifilter_replace_callback($match) {
   // return highlighted source code
   return $source_code;
 }
-
 
 /**
  * GeSHi parse function
