@@ -689,11 +689,18 @@ function geshifilter_admin_filter_conflicts($check_only=FALSE) {
   $order_conflict_filters = array(
     'filter/0' => array( // HTML filter
       'order' => 'after',
-      'description' => 'It is required to put %geshifilter after %cfilter to prevent loss of layout and highlighting.',
+      'description' => '%geshifilter should come after %cfilter to prevent loss of layout and highlighting.',
+      'solution' => array('text' => 'Rearrange filters', 'link' => '/order'),
     ),
     'pearwiki_filter/0' => array(
       'order' => 'after',
       'description' => 'It is recommended to put %geshifilter after %cfilter.',
+      'solution' => array('text' => 'Rearrange filters', 'link' => '/order'),
+    ),
+    'codefilter/0' => array(
+      'order' => 'both',
+      'description' => '%geshifilter and %cfilter should not be used in the same input format.',
+      'solution' => array('text' => 'Disable one of the filters', 'link' => ''),
     )
   );
   foreach (filter_formats() as $format => $input_format) {
@@ -707,14 +714,15 @@ function geshifilter_admin_filter_conflicts($check_only=FALSE) {
         // does this filter exist in the input format?
         if (array_key_exists($filter_key, $filters)) {
           $cfilter = $filters[$filter_key];
-          if (($conflict_info['order'] == 'after' && $geshifilter->weight <= $cfilter->weight)
+          if (($conflict_info['order'] == 'both')
+            || ($conflict_info['order'] == 'after' && $geshifilter->weight <= $cfilter->weight)
             || ($conflict_info['order'] == 'before' && $geshifilter->weight >= $cfilter->weight)
           ) {
             $alerts[] = array(
               l(t($input_format->name), "admin/settings/filters/$format"),
               $cfilter->name,
               t($conflict_info['description'], array('%cfilter' => $cfilter->name, '%geshifilter' => $geshifilter->name)),
-              l(t('Rearrange filters'), "admin/settings/filters/$format/order", array(), drupal_get_destination()),
+              l(t($conflict_info['solution']['text']), "admin/settings/filters/$format". $conflict_info['solution']['link'], array(), drupal_get_destination()),
             );
           }
         }
@@ -722,7 +730,7 @@ function geshifilter_admin_filter_conflicts($check_only=FALSE) {
     }
   }
   if ($check_only) {
-    return count($alerts) != 0;
+    return count($alerts);
   }
   else {
     // show alerts
@@ -761,7 +769,7 @@ function geshifilter_requirements($phase) {
       );
     }
     // check for filter conflicts
-    if (geshifilter_admin_filter_conflicts(TRUE)) {
+    if (geshifilter_admin_filter_conflicts(TRUE) > 0) {
       $requirements[] = array(
         'title' => 'GeSHi filter',
         'value' => t('Some filter conflicts were detected.'),
