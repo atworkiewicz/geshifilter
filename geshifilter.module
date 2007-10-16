@@ -1026,8 +1026,7 @@ function _geshifilter_replace_callback($match) {
     $att_value = $attribute_matches[2][$a_key];
     // check for the language attributes
     if (in_array($att_name, $language_attributes) && array_key_exists($att_value, $enabled_languages)) {
-        $lang = $att_value;
-      }
+      $lang = $att_value;
     }
     // check for line numbering related attributes
     // $line_numbering defines the line numbering mode:
