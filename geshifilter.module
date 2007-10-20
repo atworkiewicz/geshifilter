@@ -902,8 +902,8 @@ function _geshifilter_get_enabled_languages() {
  * (with caching)
  */
 function _geshifilter_get_tags($format) {
-  static $geshifilter_tags_cache = NULL;
-  if ($geshifilter_tags_cache === NULL) {
+  static $geshifilter_tags_cache = array();
+  if (!isset($geshifilter_tags_cache[$format])) {
     $generic_code_tags = _geshifilter_tag_split(geshifilter_tags($format));
     $language_tags = array();
     $tag_to_lang = array();
@@ -915,9 +915,9 @@ function _geshifilter_get_tags($format) {
         $tag_to_lang[$lang_tag] = $language;
       }
     }
-    $geshifilter_tags_cache = array($generic_code_tags, $language_tags, $tag_to_lang);
+    $geshifilter_tags_cache[$format] = array($generic_code_tags, $language_tags, $tag_to_lang);
   }
-  return $geshifilter_tags_cache;
+  return $geshifilter_tags_cache[$format];
 }
 
 /**
