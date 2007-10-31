@@ -184,6 +184,11 @@ function geshifilter_filter_tips($delta, $format, $long = false) {
       $tags[] = '"<code>'. $bracket_open . $tag . $bracket_close .'</code>" '. t('for @lang source code', array('@lang' => $languages[$tag_to_lang[$tag]]));
     }
     $items[] = t('Language specific syntax highlighting tags: !tags.', array('!tags' => implode(', ', $tags)));
+    // PHP specific delimiters
+    if (variable_get('geshifilter_include_php_delimiters', FALSE)) {
+      $items[] = t('PHP source code can also be enclosed in &lt;?php ... ?&gt; or &lt;% ... %&gt;, but additional options like line numbering are not possible here.');
+    }
+
     $output .= theme('item_list', $items);
 
     // Options and tips
@@ -287,6 +292,9 @@ function geshifilter_filter_tips($delta, $format, $long = false) {
     $output = t('You can enable syntax highlighting of source code with the following tags: !tags.', array('!tags' => implode(', ', $tags)));
     if (_geshifilter_brackets($format) == GESHIFILTER_BRACKETS_BOTH) {
       $output .= ' '. t('Beside the tag style "!angle" it is also possible to use "!bracket".' , array('!angle' => '<code>&lt;foo&gt;</code>', '!bracket' => '<code>[foo]</code>'));
+    }
+    if (variable_get('geshifilter_include_php_delimiters', FALSE)) {
+      $output .= ' '. t('PHP source code can also be enclosed in &lt;?php ... ?&gt; or &lt;% ... %&gt;.');
     }
     return $output;
   }
@@ -562,6 +570,14 @@ function geshifilter_admin_general_settings() {
   if (!geshifilter_use_format_specific_options()) {
     $form['geshifilter_general_tags'] = _geshifilter_general_highlight_tags_settings();
   }
+
+  // PHP specific settings
+  $form['geshifilter_include_php_delimiters'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Also apply syntax highlighting to &lt;?php ... ?&gt; style PHP source code blocks.'),
+    '#description' => t('When enabled, PHP source code enclosed in &lt;?php...?&gt or &lt;%...%&gt; will also be processed.'),
+    '#default_value' => variable_get('geshifilter_include_php_delimiters', FALSE),
+  );
 
   // default language
   $languages = _geshifilter_get_enabled_languages();
@@ -946,6 +962,10 @@ function _geshifilter_prepare($format, $text) {
   // replace the code container tag brackets
   // and prepare the container content (newline and angle bracket protection)
   $text = preg_replace_callback($pattern, '_geshifilter_prepare_callback', $text);
+  if (variable_get('geshifilter_include_php_delimiters', FALSE)) {
+    // prepare < ?php ... ? > blocks
+    $text = preg_replace_callback('#[\[<](\?php|%)(.+?)(\?|%)[\]>]#s', '_geshifilter_prepare_php_callback', $text);
+  }
   return $text;
 }
 
@@ -990,6 +1010,15 @@ function _geshifilter_prepare_callback($match) {
 }
 
 /**
+ * _geshifilter_prepare callback for < ?php ... ? > blocks
+ */
+function _geshifilter_prepare_php_callback($match) {
+  return "\xFE\xFEphp\xFF"
+    . str_replace(array("\r", "\n"), array('', '&#10;'), check_plain($match[2]))
+    ."\xFE/\xFEphp\xFF";
+}
+
+/**
  * geshifilter_filter callback for processing input text.
  */
 function _geshifilter_process($format, $text) {
@@ -1001,6 +1030,10 @@ function _geshifilter_process($format, $text) {
   }
   // get the available tags
   list($generic_code_tags, $language_tags, $tag_to_lang) = _geshifilter_get_tags($format);
+  if (variable_get('geshifilter_include_php_delimiters', FALSE)) {
+    $language_tags[] = "\xFEphp";
+    $tag_to_lang["\xFEphp"] = 'php';
+  }
   $tags = array_merge($generic_code_tags, $language_tags);
   $tags_string = implode('|', $tags);
   // Pattern for matching the prepared "<code>...</code>" stuff
@@ -1027,6 +1060,11 @@ function _geshifilter_replace_callback($match) {
 
   // get the possible tags and languages
   list($generic_code_tags, $language_tags, $tag_to_lang) = _geshifilter_get_tags($format);
+  if (variable_get('geshifilter_include_php_delimiters', FALSE)) {
+    $language_tags[] = "\xFEphp";
+    $tag_to_lang["\xFEphp"] = 'php';
+  }
+
   $enabled_languages = _geshifilter_get_enabled_languages();
 
   $language_attributes = _geshifilter_whitespace_explode(GESHIFILTER_ATTRIBUTES_LANGUAGE);
