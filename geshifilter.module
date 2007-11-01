@@ -35,16 +35,19 @@ function geshifilter_help($section) {
     case 'admin/settings/geshifilter':
     case 'admin/help#geshifilter':
       $output = '<p>'. t('The GeSHi filter module provides a filter for syntax highlighting of inline source code or blocks of source code based on the PHP library !GeSHi.', array('!GeSHi' => l('GeSHi (Generic Syntax Highlighter)', 'http://qbnz.com/highlighter/'))) .'</p>';
-      $output .= '<p>'. t('Usage is relatively easy: enable the GeSHi filter in the desired !inputformats, configure the general or per input format settings of the GeSHi filter, check for !filterconflicts and use the input filter as described in the !filtertips. After changing the general settings, it is typically needed to <a href="!clearfiltercache">clear the filter cache</a> before the changes take effect on old content.', array(
-        '!inputformats' => l(t('input formats'), 'admin/settings/filters'),
-        '!filterconflicts' => l(t('filter conflicts'), 'admin/settings/geshifilter/filterconflicts'),
-        '!filtertips' => l(t('filter tips'), 'filter/tips'),
-        '!clearfiltercache' => url('geshifilter/clearfiltercache', drupal_get_destination())
-      )) .'</p>';
       if ($section == 'admin/help#geshifilter') {
-        $output .= '<p>'. t('The GeSHi filter module for Drupal requires the GeSHi library (version 1.0.x) to work. The GeSHi filter is actually just Drupal wrapper module around the GeSHi library. Because of <a href="!repositorypolicies">drupal.org repository policies</a> however, the GeSHi library is not included in the GeSHi filter package, so you\'ll have to download and install the GeSHi library separately.', array(
+        $output .= '<p>'. t('The GeSHi filter module for Drupal requires the GeSHi library (version 1.0.x) to work. The GeSHi filter is actually just a Drupal wrapper module around the GeSHi library. Because of <a href="!repositorypolicies">drupal.org repository policies</a> however, the GeSHi library is not included in the GeSHi filter package, so you should <a href="!geshi">download</a> and install the GeSHi library separately.', array(
           '!repositorypolicies' => url('http://drupal.org/node/66113'),
+          '!geshi' => url('http://qbnz.com/highlighter/'),
         )) .'</p>';
+        $output .= t('<p>Quick overview of how to set up and use the GeSHi filter:</p><ul><li>Install the GeSHi library and specify its path on the <a href="!geshifilter_settings">GeSHi filter administration page</a>.</li><li>Configure the <a href="!geshifilter_settings">general GeSHi filter settings</a>.</li><li><a href="!geshifilter_languages">Enable the relevant languages</a> for your site.</li><li>Enable the GeSHi filter in the desired !inputformats.</li><li>Check for !filterconflicts and resolve them.</li><li>Use the input format during content submission as described in the !filtertips.</li></ul>', array(
+          '!geshifilter_settings' => url('admin/settings/geshifilter'),
+          '!geshifilter_languages' => url('admin/settings/geshifilter/languages/all'),
+          '!inputformats' => l(t('input formats'), 'admin/settings/filters'),
+          '!filterconflicts' => l(t('filter conflicts'), 'admin/settings/geshifilter/filterconflicts'),
+          '!filtertips' => l(t('filter tips'), 'filter/tips'),
+        ));
+        $output .= '<p>'. t('After changing the general GeSHi filter settings, it is typically needed to <a href="!clearfiltercache">clear the filter cache</a> before the changes take effect on old content.', array('!clearfiltercache' => url('geshifilter/clearfiltercache', drupal_get_destination()))) .'</p>';
       }
       return $output;
       break;
