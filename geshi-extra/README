@@ -1,3 +1,8 @@
+$Id$
+
+README file for geshi-extra directory
+-------------------------------------
+
 This directory is meant to store custom GeSHi language definition files that
 are not part of the default GeSHi library. Separating custom files from a
 pristine GeSHi library eases upgrading and maintenance of the GeSHi library.
