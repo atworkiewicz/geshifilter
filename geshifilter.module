@@ -55,7 +55,7 @@ function geshifilter_help($section) {
     case 'admin/settings/geshifilter/languages/enabled':
     case 'admin/settings/geshifilter/languages/all':
     case 'admin/settings/geshifilter/languages/disabled':
-      $output = '<p>'. t('Here you can enable/disable the desired languages to use. It is suggested to disable languages that are not relevant for you site not only to avoid unnecessary cluttering of the GeSHi filter configuration pages and the !filtertips, but also to make the GeSHi filter processing lighter.', array('!filtertips' => l(t('filter tips'), 'filter/tips'),)) .'</p>';
+      $output = '<p>'. t('Here you can enable/disable the desired languages to use. It is suggested to disable languages that are not relevant for you site not only to avoid unnecessary cluttering of the GeSHi filter configuration pages and the !filtertips, but also to make the GeSHi filter processing lighter.', array('!filtertips' => l(t('filter tips'), 'filter/tips'))) .'</p>';
       if (!geshifilter_use_format_specific_options()) {
         $output .= '<p>'. t('You can also define the language specific tags here.') .'</p>';
       }
@@ -366,7 +366,7 @@ function _geshifilter_check_geshi_library($use_cache=TRUE, $geshi_dir=NULL, $loa
       if ($load_when_found) {
         require_once($geshi_dir .'/geshi.php');
         // check version
-        $geshi_library_version = explode('.',GESHI_VERSION);
+        $geshi_library_version = explode('.', GESHI_VERSION);
         if (!($geshi_library_version[0] == '1' &&  $geshi_library_version[1] == '0')) {
           $geshi_library['success'] = FALSE;
           $geshi_library['loaded'] = FALSE;
@@ -488,7 +488,8 @@ function geshifilter_per_language_settings($format, $view, $add_checkbox, $add_t
         '#default_value' => $enabled,
         '#title' => $language_data['fullname'],
       );
-    } else {
+    }
+    else {
       $form['languages'][$language]['fullname'] = array(
         '#type' => 'markup',
         '#value' => $language_data['fullname'],
@@ -1061,7 +1062,7 @@ function _geshifilter_prepare_callback($match) {
   // return escaped code block
   return "\xFE". $match[2] . $match[3] ."\xFF"
     . str_replace(array("\r", "\n"), array('', '&#10;'), check_plain($match[5]))
-    ."\xFE/". $match[2]. "\xFF";
+    ."\xFE/". $match[2] ."\xFF";
 }
 
 /**
@@ -1312,11 +1313,11 @@ function _geshifilter_generate_languages_css() {
   $path = file_directory_path() .'/geshifilter';
   file_check_directory($path, FILE_CREATE_DIRECTORY);
   // make stylesheet file name (depends on enabled languages)
-  $stylesheet_file = $path . '/' . 'geshifilter-languages-'. substr(md5(serialize($languages)), 0, 8) .'.css';
+  $stylesheet_file = $path .'/geshifilter-languages-'. substr(md5(serialize($languages)), 0, 8) .'.css';
   if (!file_exists($stylesheet_file)) {
     // build stylesheet
     $stylesheet = '';
-    foreach($languages as $langcode => $language_full_name) {
+    foreach ($languages as $langcode => $language_full_name) {
       $geshi = _geshifilter_GeSHi_factory('', $langcode);
       _geshifilter_override_geshi_defaults($geshi, $langcode);
       $stylesheet .= $geshi->get_stylesheet(FALSE) ."\n";
@@ -1326,7 +1327,7 @@ function _geshifilter_generate_languages_css() {
     $ret = file_save_data($stylesheet, $stylesheet_file, FILE_EXISTS_REPLACE);
     if ($ret) {
       variable_set('geshifilter_languages_css', $ret);
-      drupal_set_message(t('Generated external CSS file %file.', array('%file'=> $ret)));
+      drupal_set_message(t('Generated external CSS file %file.', array('%file' => $ret)));
     }
     else {
       drupal_set_message(t('Could not generate external CSS file. Check the settings of your !filesystem.',
