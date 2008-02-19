@@ -51,9 +51,26 @@ function _geshifilter_admin_filter_conflicts($check_only=FALSE) {
     }
     $header = array(t('Input format'), t('Filter'), t('Description'), t('Possible solutions'));
     $output .= theme('table', $header, $alerts);
+    // add small form
+    $output .= drupal_get_form('geshifilter_admin_filter_conflict_settings');
     return $output;
   }
 }
+
+/**
+ * Form for filter conflict settings
+ */
+function geshifilter_admin_filter_conflict_settings() {
+  $form = array();
+  $form['geshifilter_filter_conflicts_on_status_report'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include conflict detection during runtime requirement checks.'),
+    '#description' => t(''),
+    '#default_value' => variable_get('geshifilter_filter_conflicts_on_status_report', TRUE),
+  );
+  return system_settings_form($form);
+}
+
 
 /**
  * conflict detection for html filter

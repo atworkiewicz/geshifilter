@@ -107,7 +107,6 @@ class GeshiFilterTest extends DrupalTestCase {
     parent::tearDown();
   }
 
-
   /**
    * Assert function for testing if GeSHi highlighting works
    */

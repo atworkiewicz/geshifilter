@@ -266,7 +266,7 @@ function _geshifilter_general_highlight_tags_settings($format=NULL) {
   // PHP specific delimiters
   $form['geshifilter']["geshifilter_enable_php_delimiters$f"] = array(
     '#type' => 'checkbox',
-    '#title' => t('Also apply syntax highlighting to &lt;?php ... ?&gt; style PHP source code blocks.'),
+    '#title' => t('Apply syntax highlighting to &lt;?php ... ?&gt; style PHP source code blocks.'),
     '#description' => t('When enabled, PHP source code enclosed in &lt;?php...?&gt or &lt;%...%&gt; will also be processed.'),
     '#default_value' => _geshifilter_php_delimeters($format),
   );
@@ -802,6 +802,7 @@ function _geshifilter_css_mode() {
  * Helper function for clearing the appropriate filter cache entries
  */
 function _geshifilter_clear_filter_cache() {
+  $message = FALSE;
   // iterate over input formats
   foreach (filter_formats() as $format => $input_format) {
     // Get the filters in this input format
@@ -809,7 +810,12 @@ function _geshifilter_clear_filter_cache() {
     // look if GeSHi is enabled in this input format
     if (isset($filters['geshifilter/0'])) {
       cache_clear_all($format .':', 'cache_filter', TRUE);
+      $message = TRUE;
     }
+  }
+  // give a message that the filter cache was cleared
+  if ($message) {
+    drupal_set_message(t('GeSHi filter cleared the filter cache for the appropriate input formats.'));
   }
 }
 
