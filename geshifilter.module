@@ -323,7 +323,7 @@ function geshifilter_per_language_settings($format, $view, $add_checkbox, $add_t
   $form['languages'] = array();
   $languages = _geshifilter_get_available_languages();
   foreach ($languages as $language => $language_data) {
-    $enabled = variable_get("geshifilter_language_enabled_{$language}", TRUE);
+    $enabled = variable_get('geshifilter_language_enabled_'. $language, FALSE);
     // skip items to hide
     if (($view == 'enabled' && !$enabled) || ($view == 'disabled' && $enabled)) {
       continue;
@@ -332,7 +332,7 @@ function geshifilter_per_language_settings($format, $view, $add_checkbox, $add_t
     $form['languages'][$language] = array();
     // add enable/disable checkbox
     if ($add_checkbox) {
-      $form['languages'][$language]["geshifilter_language_enabled_{$language}"] = array(
+      $form['languages'][$language]['geshifilter_language_enabled_'. $language] = array(
         '#type' => 'checkbox',
         '#default_value' => $enabled,
         '#title' => $language_data['fullname'],
@@ -758,7 +758,7 @@ function _geshifilter_get_enabled_languages() {
     $enabled_languages = array();
     $languages = _geshifilter_get_available_languages();
     foreach ($languages as $language => $language_data) {
-      if (variable_get("geshifilter_language_enabled_{$language}", TRUE)) {
+      if (variable_get('geshifilter_language_enabled_'. $language, FALSE)) {
         $enabled_languages[$language] = $language_data['fullname'];
       }
     }
