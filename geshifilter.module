@@ -567,8 +567,14 @@ function geshifilter_admin_general_settings_validate($form_id, $form_values) {
  * Submit function for admin settings
  */
 function geshifilter_admin_general_settings_submit($form_id, $form_values) {
+  // cache of available languages should be cleared when geshi dir changes
+  if (_geshifilter_get_geshi_dir() != $form_values['geshifilter_geshi_dir']) {
+    variable_del('geshifilter_available_languages_cache');
+  }
+
   // normal system_settings_form processing
   system_settings_form_submit($form_id, $form_values);
+
   // regenerate language_css
   if (_geshifilter_css_mode() == GESHIFILTER_CSS_CLASSES) {
     _geshifilter_generate_languages_css();
@@ -707,7 +713,7 @@ function geshifilter_language_tags($language, $format = NULL) {
  */
 function _geshifilter_get_available_languages() {
   // try to get it from cache (database actually)
-  $available_languages = variable_get('geshifilter_available_languages', NULL);
+  $available_languages = variable_get('geshifilter_available_languages_cache', NULL);
   if ($available_languages === NULL) {
     // not in cache: build the array of available_languages
     $geshi_library = _geshifilter_check_geshi_library();
@@ -729,7 +735,7 @@ function _geshifilter_get_available_languages() {
       }
       ksort($available_languages);
       // save array to database
-      variable_set('geshifilter_available_languages', $available_languages);
+      variable_set('geshifilter_available_languages_cache', $available_languages);
     }
   }
   return $available_languages;
@@ -822,7 +828,7 @@ function _geshifilter_clear_filter_cache() {
  * callback function for clearing the available languages cache
  */
 function geshifilter_clear_available_languages_cache() {
-  variable_del('geshifilter_available_languages');
+  variable_del('geshifilter_available_languages_cache');
   drupal_set_message('Flushed cache of available languages.');
   drupal_goto();
 }
