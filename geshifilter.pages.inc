@@ -1,6 +1,8 @@
 <?php
 // $Id$
 
+require_once('geshifilter.inc');
+
 /**
  * Helper function for parsing the attributes of GeSHi code tags
  * to get the settings for language and line numbers.
