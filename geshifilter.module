@@ -269,10 +269,6 @@ function geshifilter_requirements($phase) {
         'severity' => REQUIREMENT_ERROR,
       );
     }
-    // Check if automatically managed style sheet is posible
-    if ($form_values['geshifilter_css_mode'] == GESHIFILTER_CSS_CLASSES_AUTOMATIC && !_geshifilter_managed_external_stylesheet_possible()) {
-      form_set_error('geshifilter_css_mode', t('GeSHi filter can not automatically manage an external style sheet when the download method is private.'));
-    }
   }
   return $requirements;
 }
