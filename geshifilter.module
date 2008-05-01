@@ -745,7 +745,7 @@ function _geshifilter_get_available_languages() {
  * helper function for generating a GeSHi object
  * @param $language the language to generate a GeSHi object for
  */
-function _geshifilter_GeSHi_factory($source_code, $language) {
+function _geshifilter_geshi_factory($source_code, $language) {
   $available_languages = _geshifilter_get_available_languages();
   $geshi = new GeSHi($source_code, $language);
   $geshi->set_language_path($available_languages[$language]['language_path']);
@@ -848,7 +848,7 @@ function _geshifilter_generate_languages_css() {
     // build stylesheet
     $stylesheet = '';
     foreach ($languages as $langcode => $language_full_name) {
-      $geshi = _geshifilter_GeSHi_factory('', $langcode);
+      $geshi = _geshifilter_geshi_factory('', $langcode);
       _geshifilter_override_geshi_defaults($geshi, $langcode);
       $stylesheet .= $geshi->get_stylesheet(FALSE) ."\n";
       unset($geshi);
