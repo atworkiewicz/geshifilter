@@ -329,7 +329,7 @@ msgid "Apply syntax highlighting to &lt;?php ... ?&gt; style PHP source code blo
 msgstr ""
 
 #: geshifilter.module:270
-msgid "When enabled, PHP source code enclosed in &lt;?php...?&gt or &lt;%...%&gt; will also be processed."
+msgid "When enabled, PHP source code enclosed in &lt;?php...?&gt; or &lt;%...%&gt; will also be processed."
 msgstr ""
 
 #: geshifilter.module:283
