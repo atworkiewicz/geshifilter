@@ -61,3 +61,10 @@ div.geshifilter-title {
   margin: 0.5em 0.5em -0.5em 0.5em;
   background-color: #ccc;
 }
+
+/* Styling for GeSHi filter code blocks tools (partial collapsing toggle) */
+div.geshifilter-tools {
+  margin: -0.5em 0.5em 0.5em 0.5em;
+  background-color: #ccc;
+  padding: 0.5ex 0.5em;
+}
