@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 function _geshifilter_get_geshi_dir() {
   return variable_get('geshifilter_geshi_dir', drupal_get_path('module', 'geshifilter') .'/geshi');
