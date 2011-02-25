@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 define('GESHIFILTER_CSS_INLINE', 1);
 define('GESHIFILTER_CSS_CLASSES', 2);
